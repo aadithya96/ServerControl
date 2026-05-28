@@ -1,15 +1,18 @@
 package com.servercontrol.domain.model
 
 data class SystemStats(
-    val cpuPercent: Double,
-    val memUsedBytes: Long,
-    val memTotalBytes: Long,
-    val swapUsedBytes: Long,
-    val swapTotalBytes: Long,
-    val uptimeSeconds: Long,
-    val loadAvg1m: Double,
-    val loadAvg5m: Double,
-    val loadAvg15m: Double
+    val hostname: String = "",
+    val uptimeSeconds: Long = 0,
+    val loadAvg1m: Double = 0.0,
+    val loadAvg5m: Double = 0.0,
+    val loadAvg15m: Double = 0.0,
+    val cpuPercent: Double = 0.0,
+    val cpuCores: Int = 0,
+    val memTotalBytes: Long = 0,
+    val memUsedBytes: Long = 0,
+    val memFreeBytes: Long = 0,
+    val swapTotalBytes: Long = 0,
+    val swapUsedBytes: Long = 0
 ) {
     val memPercent: Double
         get() = if (memTotalBytes > 0) memUsedBytes.toDouble() / memTotalBytes * 100 else 0.0

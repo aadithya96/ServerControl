@@ -8,26 +8,26 @@
 - [x] Material3 theme
 
 ## Phase 2: Agent Daemon (server-side)
-- [ ] Write lightweight Go or Python agent daemon
-  - [ ] GET /stats — cpu, mem, swap, uptime, load avg
-  - [ ] GET /processes — pid, name, cpu%, mem%, user, command
-  - [ ] GET /disk — mounts, used, total, read_bps, write_bps
-  - [ ] GET /connections — proto, local_addr, remote_addr, state, pid
-  - [ ] GET /firewall — chain, target, proto, source, destination, options
-  - [ ] DELETE /process/{pid} — kill process
-  - [ ] POST /firewall/toggle — enable/disable rule
-  - [ ] Bearer token auth for all endpoints
-  - [ ] TLS support (self-signed cert option)
-- [ ] Write install script (curl | bash) for the daemon
-- [ ] Systemd service unit file for daemon
+- [x] Write lightweight Go or Python agent daemon
+  - [x] GET /stats — cpu, mem, swap, uptime, load avg
+  - [x] GET /processes — pid, name, cpu%, mem%, user, command
+  - [x] GET /disk — mounts, used, total, read_bps, write_bps
+  - [x] GET /connections — proto, local_addr, remote_addr, state, pid
+  - [x] GET /firewall — chain, target, proto, source, destination, options
+  - [x] DELETE /process/{pid} — kill process
+  - [x] POST /firewall/toggle — enable/disable rule
+  - [x] Bearer token auth for all endpoints
+  - [x] TLS support (self-signed cert option)
+- [x] Write install script (curl | bash) for the daemon
+- [x] Systemd service unit file for daemon
 
 ## Phase 3: Data Layer — Agent
-- [ ] Finalize all DTOs to match agent JSON schema
-- [ ] AgentApi Retrofit interface — all endpoints
-- [ ] AgentDataSource with error handling
-- [ ] OkHttp interceptor for Bearer token
-- [ ] Self-signed cert TLS support in OkHttp
-- [ ] StatsRepositoryImpl — agent path
+- [x] Finalize all DTOs to match agent JSON schema
+- [x] AgentApi Retrofit interface — all endpoints
+- [x] AgentDataSource with error handling
+- [x] OkHttp interceptor for Bearer token
+- [x] Self-signed cert TLS support in OkHttp
+- [x] StatsRepositoryImpl — agent path
 - [ ] Unit tests for repository (mock AgentApi)
 
 ## Phase 4: Data Layer — SSH Fallback

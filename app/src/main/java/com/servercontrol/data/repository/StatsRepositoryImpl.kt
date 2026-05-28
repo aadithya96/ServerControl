@@ -23,8 +23,7 @@ class StatsRepositoryImpl @Inject constructor(
         val server = getServer(serverId) ?: return Resource.Error("Server not found")
         return when (server.authType) {
             AuthType.AGENT_TOKEN -> {
-                val result = agentDataSource.getSystemStats(server)
-                when (result) {
+                when (val result = agentDataSource.getStats(server)) {
                     is Resource.Success -> Resource.Success(result.data.toDomain())
                     is Resource.Error -> Resource.Error(result.message, result.throwable)
                     is Resource.Loading -> Resource.Loading
@@ -38,9 +37,25 @@ class StatsRepositoryImpl @Inject constructor(
         val server = getServer(serverId) ?: return Resource.Error("Server not found")
         return when (server.authType) {
             AuthType.AGENT_TOKEN -> {
-                val result = agentDataSource.getProcesses(server)
-                when (result) {
-                    is Resource.Success -> Resource.Success(result.data.map { it.toDomain() })
+                when (val result = agentDataSource.getProcesses(server, sort = "cpu")) {
+                    is Resource.Success -> Resource.Success(result.data.processes.map { it.toDomain() })
+                    is Resource.Error -> Resource.Error(result.message, result.throwable)
+                    is Resource.Loading -> Resource.Loading
+                }
+            }
+            else -> sshDataSource.getProcesses(server)
+        }
+    }
+
+    /**
+     * Overload that accepts a sort parameter for the agent endpoint.
+     */
+    suspend fun getProcesses(serverId: Long, sort: String): Resource<List<Process>> {
+        val server = getServer(serverId) ?: return Resource.Error("Server not found")
+        return when (server.authType) {
+            AuthType.AGENT_TOKEN -> {
+                when (val result = agentDataSource.getProcesses(server, sort = sort)) {
+                    is Resource.Success -> Resource.Success(result.data.processes.map { it.toDomain() })
                     is Resource.Error -> Resource.Error(result.message, result.throwable)
                     is Resource.Loading -> Resource.Loading
                 }
@@ -53,9 +68,8 @@ class StatsRepositoryImpl @Inject constructor(
         val server = getServer(serverId) ?: return Resource.Error("Server not found")
         return when (server.authType) {
             AuthType.AGENT_TOKEN -> {
-                val result = agentDataSource.getDiskInfo(server)
-                when (result) {
-                    is Resource.Success -> Resource.Success(result.data.map { it.toDomain() })
+                when (val result = agentDataSource.getDiskInfo(server)) {
+                    is Resource.Success -> Resource.Success(result.data.mounts.map { it.toDomain() })
                     is Resource.Error -> Resource.Error(result.message, result.throwable)
                     is Resource.Loading -> Resource.Loading
                 }
@@ -68,9 +82,25 @@ class StatsRepositoryImpl @Inject constructor(
         val server = getServer(serverId) ?: return Resource.Error("Server not found")
         return when (server.authType) {
             AuthType.AGENT_TOKEN -> {
-                val result = agentDataSource.getConnections(server)
-                when (result) {
-                    is Resource.Success -> Resource.Success(result.data.map { it.toDomain() })
+                when (val result = agentDataSource.getConnections(server)) {
+                    is Resource.Success -> Resource.Success(result.data.connections.map { it.toDomain() })
+                    is Resource.Error -> Resource.Error(result.message, result.throwable)
+                    is Resource.Loading -> Resource.Loading
+                }
+            }
+            else -> sshDataSource.getConnections(server)
+        }
+    }
+
+    /**
+     * Overload that accepts a proto filter for the agent endpoint.
+     */
+    suspend fun getConnections(serverId: Long, proto: String): Resource<List<NetworkConnection>> {
+        val server = getServer(serverId) ?: return Resource.Error("Server not found")
+        return when (server.authType) {
+            AuthType.AGENT_TOKEN -> {
+                when (val result = agentDataSource.getConnections(server, proto)) {
+                    is Resource.Success -> Resource.Success(result.data.connections.map { it.toDomain() })
                     is Resource.Error -> Resource.Error(result.message, result.throwable)
                     is Resource.Loading -> Resource.Loading
                 }
@@ -83,9 +113,8 @@ class StatsRepositoryImpl @Inject constructor(
         val server = getServer(serverId) ?: return Resource.Error("Server not found")
         return when (server.authType) {
             AuthType.AGENT_TOKEN -> {
-                val result = agentDataSource.getFirewallRules(server)
-                when (result) {
-                    is Resource.Success -> Resource.Success(result.data.map { it.toDomain() })
+                when (val result = agentDataSource.getFirewallRules(server)) {
+                    is Resource.Success -> Resource.Success(result.data.toDomainList())
                     is Resource.Error -> Resource.Error(result.message, result.throwable)
                     is Resource.Loading -> Resource.Loading
                 }
@@ -97,17 +126,37 @@ class StatsRepositoryImpl @Inject constructor(
     override suspend fun killProcess(serverId: Long, pid: Int): Resource<Unit> {
         val server = getServer(serverId) ?: return Resource.Error("Server not found")
         return when (server.authType) {
-            AuthType.AGENT_TOKEN -> agentDataSource.killProcess(server, pid)
+            AuthType.AGENT_TOKEN -> {
+                when (val result = agentDataSource.killProcess(server, pid)) {
+                    is Resource.Success -> {
+                        if (result.data.success) Resource.Success(Unit)
+                        else Resource.Error(result.data.message)
+                    }
+                    is Resource.Error -> Resource.Error(result.message, result.throwable)
+                    is Resource.Loading -> Resource.Loading
+                }
+            }
             else -> sshDataSource.killProcess(server, pid)
         }
     }
 
     override suspend fun toggleFirewallRule(
-        serverId: Long, ruleId: String, enable: Boolean
+        serverId: Long,
+        ruleId: String,
+        enable: Boolean
     ): Resource<Unit> {
         val server = getServer(serverId) ?: return Resource.Error("Server not found")
         return when (server.authType) {
-            AuthType.AGENT_TOKEN -> agentDataSource.toggleFirewallRule(server, ruleId, enable)
+            AuthType.AGENT_TOKEN -> {
+                when (val result = agentDataSource.toggleFirewallRule(server, ruleId, enable)) {
+                    is Resource.Success -> {
+                        if (result.data.success) Resource.Success(Unit)
+                        else Resource.Error(result.data.message)
+                    }
+                    is Resource.Error -> Resource.Error(result.message, result.throwable)
+                    is Resource.Loading -> Resource.Loading
+                }
+            }
             else -> Resource.Error("Firewall toggle requires agent — SSH toggle not supported")
         }
     }

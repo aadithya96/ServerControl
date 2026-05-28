@@ -44,38 +44,69 @@ class AgentDataSource {
             })
             .build()
 
+        val scheme = if (serverProfile.agentPort == 443) "https" else "http"
         return Retrofit.Builder()
-            .baseUrl("http://${serverProfile.host}:${serverProfile.agentPort}/")
+            .baseUrl("$scheme://${serverProfile.host}:${serverProfile.agentPort}/")
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(AgentApi::class.java)
     }
 
-    suspend fun getSystemStats(serverProfile: ServerProfile): Resource<SystemStatsDto> =
-        safeCall { buildApi(serverProfile).getSystemStats() }
+    /**
+     * Test connectivity by calling /health and measuring latency.
+     * Returns latency in milliseconds on success, or an error.
+     */
+    suspend fun testConnection(serverProfile: ServerProfile): Resource<Long> {
+        return try {
+            val start = System.currentTimeMillis()
+            buildApi(serverProfile).healthCheck()
+            val latency = System.currentTimeMillis() - start
+            Resource.Success(latency)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Connection failed", e)
+        }
+    }
 
-    suspend fun getProcesses(serverProfile: ServerProfile): Resource<List<ProcessDto>> =
-        safeCall { buildApi(serverProfile).getProcesses() }
+    suspend fun getStats(serverProfile: ServerProfile): Resource<SystemStatsDto> =
+        safeCall { buildApi(serverProfile).getStats() }
 
-    suspend fun getDiskInfo(serverProfile: ServerProfile): Resource<List<DiskDto>> =
-        safeCall { buildApi(serverProfile).getDiskInfo() }
+    suspend fun getProcesses(
+        serverProfile: ServerProfile,
+        sort: String = "cpu",
+        limit: Int = 100
+    ): Resource<ProcessResponseDto> =
+        safeCall { buildApi(serverProfile).getProcesses(sort, limit) }
 
-    suspend fun getConnections(serverProfile: ServerProfile): Resource<List<ConnectionDto>> =
-        safeCall { buildApi(serverProfile).getConnections() }
+    suspend fun getDiskInfo(serverProfile: ServerProfile): Resource<DiskResponseDto> =
+        safeCall { buildApi(serverProfile).getDisk() }
 
-    suspend fun getFirewallRules(serverProfile: ServerProfile): Resource<List<FirewallRuleDto>> =
-        safeCall { buildApi(serverProfile).getFirewallRules() }
+    suspend fun getConnections(
+        serverProfile: ServerProfile,
+        proto: String = "all"
+    ): Resource<ConnectionResponseDto> =
+        safeCall { buildApi(serverProfile).getConnections(proto) }
 
-    suspend fun killProcess(serverProfile: ServerProfile, pid: Int): Resource<Unit> =
-        safeCall { buildApi(serverProfile).killProcess(pid) }
+    suspend fun getFirewallRules(serverProfile: ServerProfile): Resource<FirewallResponseDto> =
+        safeCall { buildApi(serverProfile).getFirewall() }
+
+    suspend fun killProcess(
+        serverProfile: ServerProfile,
+        pid: Int,
+        signal: Int = 9
+    ): Resource<KillResponseDto> =
+        safeCall { buildApi(serverProfile).killProcess(pid, signal) }
 
     suspend fun toggleFirewallRule(
         serverProfile: ServerProfile,
         ruleId: String,
-        enable: Boolean
-    ): Resource<Unit> =
-        safeCall { buildApi(serverProfile).toggleFirewallRule(FirewallToggleRequest(ruleId, enable)) }
+        enabled: Boolean
+    ): Resource<FirewallToggleResponseDto> =
+        safeCall {
+            buildApi(serverProfile).toggleFirewallRule(
+                FirewallToggleRequest(ruleId, enabled)
+            )
+        }
 
     private suspend fun <T> safeCall(call: suspend () -> T): Resource<T> = try {
         Resource.Success(call())

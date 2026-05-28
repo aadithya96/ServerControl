@@ -1,0 +1,24 @@
+[Unit]
+Description=ServerControl Agent Daemon
+After=network.target
+Documentation=https://github.com/servercontrol/agent
+
+[Service]
+Type=simple
+User=root
+EnvironmentFile=/etc/servercontrol/agent.conf
+ExecStart=/usr/local/bin/servercontrol-agent
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=servercontrol-agent
+
+# Security hardening (limited since we need iptables access)
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/etc/servercontrol
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

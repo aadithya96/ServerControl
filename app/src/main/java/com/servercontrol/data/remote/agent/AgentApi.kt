@@ -1,37 +1,45 @@
 package com.servercontrol.data.remote.agent
 
-import com.servercontrol.data.remote.dto.ConnectionDto
-import com.servercontrol.data.remote.dto.DiskDto
-import com.servercontrol.data.remote.dto.FirewallRuleDto
-import com.servercontrol.data.remote.dto.ProcessDto
+import com.servercontrol.data.remote.dto.ConnectionResponseDto
+import com.servercontrol.data.remote.dto.DiskResponseDto
+import com.servercontrol.data.remote.dto.FirewallResponseDto
+import com.servercontrol.data.remote.dto.FirewallToggleRequest
+import com.servercontrol.data.remote.dto.FirewallToggleResponseDto
+import com.servercontrol.data.remote.dto.HealthDto
+import com.servercontrol.data.remote.dto.KillResponseDto
+import com.servercontrol.data.remote.dto.ProcessResponseDto
 import com.servercontrol.data.remote.dto.SystemStatsDto
 import retrofit2.http.*
 
 interface AgentApi {
 
-    @GET("stats")
-    suspend fun getSystemStats(): SystemStatsDto
+    @GET("api/v1/stats")
+    suspend fun getStats(): SystemStatsDto
 
-    @GET("processes")
-    suspend fun getProcesses(): List<ProcessDto>
+    @GET("api/v1/processes")
+    suspend fun getProcesses(
+        @Query("sort") sort: String = "cpu",
+        @Query("limit") limit: Int = 100
+    ): ProcessResponseDto
 
-    @GET("disk")
-    suspend fun getDiskInfo(): List<DiskDto>
+    @GET("api/v1/disk")
+    suspend fun getDisk(): DiskResponseDto
 
-    @GET("connections")
-    suspend fun getConnections(): List<ConnectionDto>
+    @GET("api/v1/connections")
+    suspend fun getConnections(@Query("proto") proto: String = "all"): ConnectionResponseDto
 
-    @GET("firewall")
-    suspend fun getFirewallRules(): List<FirewallRuleDto>
+    @GET("api/v1/firewall")
+    suspend fun getFirewall(): FirewallResponseDto
 
-    @DELETE("process/{pid}")
-    suspend fun killProcess(@Path("pid") pid: Int)
+    @DELETE("api/v1/process/{pid}")
+    suspend fun killProcess(
+        @Path("pid") pid: Int,
+        @Query("signal") signal: Int = 9
+    ): KillResponseDto
 
-    @POST("firewall/toggle")
-    suspend fun toggleFirewallRule(@Body request: FirewallToggleRequest)
+    @POST("api/v1/firewall/toggle")
+    suspend fun toggleFirewallRule(@Body request: FirewallToggleRequest): FirewallToggleResponseDto
+
+    @GET("health")
+    suspend fun healthCheck(): HealthDto
 }
-
-data class FirewallToggleRequest(
-    val id: String,
-    val enable: Boolean
-)
