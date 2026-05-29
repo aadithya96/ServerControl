@@ -1,17 +1,22 @@
 package com.servercontrol.presentation.terminal
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -20,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -27,11 +33,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.servercontrol.terminal.SessionState
+import com.servercontrol.terminal.TerminalColorTheme
 import com.servercontrol.terminal.TerminalSession
+import com.servercontrol.terminal.TerminalThemes
 import kotlinx.coroutines.launch
 
-private val TerminalBackground = Color(0xFF0D1117)
-private val TerminalText = Color(0xFFE6EDF3)
 private val TabActiveColor = Color(0xFF238636)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,25 +52,32 @@ fun TerminalScreen(
     val outputs by viewModel.outputs.collectAsState()
     val sessionStates by viewModel.sessionStates.collectAsState()
     val fontSize by viewModel.fontSize.collectAsState()
+    val colorTheme by viewModel.colorTheme.collectAsState()
+
+    val colors = remember(colorTheme) { TerminalThemes.forTheme(colorTheme) }
+    val terminalBackground = colors.background
+    val terminalText = colors.foreground
 
     var inputText by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
+    val clipboardManager = LocalClipboardManager.current
 
     Scaffold(
-        containerColor = TerminalBackground,
+        containerColor = terminalBackground,
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF161B22),
-                    titleContentColor = TerminalText,
-                    actionIconContentColor = TerminalText,
-                    navigationIconContentColor = TerminalText
+                    titleContentColor = terminalText,
+                    actionIconContentColor = terminalText,
+                    navigationIconContentColor = terminalText
                 ),
                 title = {
                     TabRow(
                         tabs = tabs,
                         activeTabId = activeTabId,
                         sessionStates = sessionStates,
+                        terminalText = terminalText,
                         onSelectTab = viewModel::selectTab,
                         onCloseTab = { id ->
                             if (tabs.size > 1) viewModel.closeTab(id)
@@ -104,6 +117,26 @@ fun TerminalScreen(
                                     showSettings = false
                                 }
                             )
+                            HorizontalDivider()
+                            Text(
+                                "Theme",
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                            TerminalColorTheme.values().forEach { theme ->
+                                DropdownMenuItem(
+                                    text = { Text(theme.displayName) },
+                                    onClick = {
+                                        viewModel.setColorTheme(theme)
+                                        showSettings = false
+                                    },
+                                    trailingIcon = {
+                                        if (colorTheme == theme) {
+                                            Icon(Icons.Default.Check, contentDescription = null)
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -112,12 +145,23 @@ fun TerminalScreen(
         bottomBar = {
             Column(modifier = Modifier.background(Color(0xFF161B22))) {
                 ExtendedKeyRow(
+                    terminalText = terminalText,
                     onKey = { key -> viewModel.sendInput(key) },
-                    onControlChar = { char -> viewModel.sendControlChar(char) }
+                    onControlChar = { char -> viewModel.sendControlChar(char) },
+                    onCopy = {
+                        val allText = activeTabId?.let { outputs[it]?.text } ?: ""
+                        clipboardManager.setText(AnnotatedString(allText))
+                    },
+                    onPaste = {
+                        val text = clipboardManager.getText()?.text ?: ""
+                        if (text.isNotEmpty()) viewModel.sendInput(text)
+                    }
                 )
                 HorizontalDivider(color = Color(0xFF30363D))
                 InputRow(
                     inputText = inputText,
+                    terminalText = terminalText,
+                    terminalBackground = terminalBackground,
                     onInputChange = { inputText = it },
                     onSend = {
                         viewModel.sendInput(inputText + "\n")
@@ -131,7 +175,7 @@ fun TerminalScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(TerminalBackground)
+                .background(terminalBackground)
         ) {
             val activeState = activeTabId?.let { sessionStates[it] }
 
@@ -145,7 +189,7 @@ fun TerminalScreen(
                             CircularProgressIndicator(color = TabActiveColor)
                             Text(
                                 "Connecting...",
-                                color = TerminalText,
+                                color = terminalText,
                                 fontFamily = FontFamily.Monospace
                             )
                         }
@@ -155,7 +199,10 @@ fun TerminalScreen(
                     TerminalOutput(
                         output = activeTabId?.let { outputs[it] } ?: AnnotatedString(""),
                         fontSize = fontSize,
-                        modifier = Modifier.fillMaxSize()
+                        terminalBackground = terminalBackground,
+                        terminalText = terminalText,
+                        modifier = Modifier.fillMaxSize(),
+                        onFontSizeChange = { viewModel.setFontSize(it) }
                     )
                     Box(
                         modifier = Modifier
@@ -192,7 +239,10 @@ fun TerminalScreen(
                     TerminalOutput(
                         output = activeTabId?.let { outputs[it] } ?: AnnotatedString(""),
                         fontSize = fontSize,
-                        modifier = Modifier.fillMaxSize()
+                        terminalBackground = terminalBackground,
+                        terminalText = terminalText,
+                        modifier = Modifier.fillMaxSize(),
+                        onFontSizeChange = { viewModel.setFontSize(it) }
                     )
                 }
             }
@@ -205,6 +255,7 @@ private fun TabRow(
     tabs: List<TerminalSession>,
     activeTabId: String?,
     sessionStates: Map<String, SessionState>,
+    terminalText: Color,
     onSelectTab: (String) -> Unit,
     onCloseTab: (String) -> Unit,
     onAddTab: () -> Unit
@@ -248,7 +299,7 @@ private fun TabRow(
                 ) {
                     Text(
                         text = tab.title,
-                        color = if (isActive) TerminalText else TerminalText.copy(alpha = 0.6f),
+                        color = if (isActive) terminalText else terminalText.copy(alpha = 0.6f),
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp
                     )
@@ -261,7 +312,7 @@ private fun TabRow(
                         Icon(
                             Icons.Default.Close,
                             contentDescription = "Close tab",
-                            tint = TerminalText.copy(alpha = 0.6f),
+                            tint = terminalText.copy(alpha = 0.6f),
                             modifier = Modifier.size(12.dp)
                         )
                     }
@@ -274,7 +325,7 @@ private fun TabRow(
                 Icon(
                     Icons.Default.Add,
                     contentDescription = "Add tab",
-                    tint = TerminalText.copy(alpha = 0.7f),
+                    tint = terminalText.copy(alpha = 0.7f),
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -286,14 +337,24 @@ private fun TabRow(
 private fun TerminalOutput(
     output: AnnotatedString,
     fontSize: Int,
-    modifier: Modifier = Modifier
+    terminalBackground: Color,
+    terminalText: Color,
+    modifier: Modifier = Modifier,
+    onFontSizeChange: (Int) -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
+    // Pinch-to-zoom state
+    var scale by remember { mutableStateOf(1f) }
+    val transformableState = rememberTransformableState { zoomChange, _, _ ->
+        scale = (scale * zoomChange).coerceIn(0.5f, 2.5f)
+        val newSize = (13 * scale).toInt().coerceIn(8, 32)
+        onFontSizeChange(newSize)
+    }
+
     // Split output into lines for display in LazyColumn
     val lines = remember(output) {
-        // We split on newline boundaries while keeping ANSI spans intact
         val text = output.text
         val lineRanges = mutableListOf<IntRange>()
         var start = 0
@@ -324,41 +385,50 @@ private fun TerminalOutput(
         }
     }
 
-    LazyColumn(
-        state = listState,
+    SelectionContainer(
         modifier = modifier
-            .background(TerminalBackground)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        contentPadding = PaddingValues(bottom = 8.dp)
+            .background(terminalBackground)
+            .transformable(state = transformableState)
     ) {
-        items(lines.size) { index ->
-            Text(
-                text = lines[index],
-                fontFamily = FontFamily.Monospace,
-                fontSize = fontSize.sp,
-                color = TerminalText,
-                lineHeight = (fontSize * 1.4).sp
-            )
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            contentPadding = PaddingValues(bottom = 8.dp)
+        ) {
+            items(lines) { line ->
+                Text(
+                    text = line,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = fontSize.sp,
+                    color = terminalText,
+                    lineHeight = (fontSize * 1.4).sp
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun ExtendedKeyRow(
+    terminalText: Color,
     onKey: (String) -> Unit,
-    onControlChar: (Char) -> Unit
+    onControlChar: (Char) -> Unit,
+    onCopy: () -> Unit,
+    onPaste: () -> Unit
 ) {
     val keys = listOf(
         "Tab" to "\t",
-        "Esc" to "",
-        "↑" to "[A",
-        "↓" to "[B",
-        "←" to "[D",
-        "→" to "[C",
-        "PgUp" to "[5~",
-        "PgDn" to "[6~",
-        "Home" to "[H",
-        "End" to "[F",
+        "Esc" to "",
+        "↑" to "[A",
+        "↓" to "[B",
+        "←" to "[D",
+        "→" to "[C",
+        "PgUp" to "[5~",
+        "PgDn" to "[6~",
+        "Home" to "[H",
+        "End" to "[F",
         "|" to "|",
         "~" to "~",
         "/" to "/"
@@ -373,7 +443,7 @@ private fun ExtendedKeyRow(
     ) {
         // Ctrl+C
         OutlinedButton(
-            onClick = { onControlChar('') },
+            onClick = { onControlChar('') },
             modifier = Modifier.height(32.dp),
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5555)),
@@ -386,7 +456,7 @@ private fun ExtendedKeyRow(
 
         // Ctrl+D
         OutlinedButton(
-            onClick = { onControlChar('') },
+            onClick = { onControlChar('') },
             modifier = Modifier.height(32.dp),
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFFC107)),
@@ -397,12 +467,38 @@ private fun ExtendedKeyRow(
             Text("Ctrl+D", fontSize = 11.sp, fontFamily = FontFamily.Monospace)
         }
 
+        // Copy button
+        OutlinedButton(
+            onClick = onCopy,
+            modifier = Modifier.height(32.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = terminalText),
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp, Color(0xFF30363D)
+            )
+        ) {
+            Text("Copy", fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+        }
+
+        // Paste button
+        OutlinedButton(
+            onClick = onPaste,
+            modifier = Modifier.height(32.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = terminalText),
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp, Color(0xFF30363D)
+            )
+        ) {
+            Text("Paste", fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+        }
+
         keys.forEach { (label, seq) ->
             OutlinedButton(
                 onClick = { onKey(seq) },
                 modifier = Modifier.height(32.dp),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = TerminalText),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = terminalText),
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp, Color(0xFF30363D)
                 )
@@ -416,6 +512,8 @@ private fun ExtendedKeyRow(
 @Composable
 private fun InputRow(
     inputText: String,
+    terminalText: Color,
+    terminalBackground: Color,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit
 ) {
@@ -431,10 +529,10 @@ private fun InputRow(
             onValueChange = onInputChange,
             modifier = Modifier
                 .weight(1f)
-                .background(Color(0xFF0D1117), RoundedCornerShape(6.dp))
+                .background(terminalBackground, RoundedCornerShape(6.dp))
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             textStyle = TextStyle(
-                color = TerminalText,
+                color = terminalText,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 13.sp
             ),
@@ -444,7 +542,7 @@ private fun InputRow(
                     if (inputText.isEmpty()) {
                         Text(
                             "type command here...",
-                            color = TerminalText.copy(alpha = 0.3f),
+                            color = terminalText.copy(alpha = 0.3f),
                             fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp
                         )

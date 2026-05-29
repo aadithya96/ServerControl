@@ -13,6 +13,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import com.servercontrol.domain.repository.ServerRepository
 import com.servercontrol.terminal.AnsiParser
 import com.servercontrol.terminal.SessionState
+import com.servercontrol.terminal.TerminalColorTheme
 import com.servercontrol.terminal.TerminalManager
 import com.servercontrol.terminal.TerminalSession
 import com.servercontrol.terminal.TerminalThemes
@@ -25,13 +26,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-enum class TerminalColorTheme(val displayName: String) {
-    DARK("Dark"),
-    SOLARIZED("Solarized"),
-    DRACULA("Dracula"),
-    LIGHT("Light")
-}
 
 private val KEY_FONT_SIZE = intPreferencesKey("terminal_font_size")
 private val KEY_COLOR_THEME = stringPreferencesKey("terminal_theme")

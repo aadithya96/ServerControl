@@ -148,19 +148,19 @@
 - [ ] Release build signing config
 
 ## Phase 15: SSH Terminal
-- [~] Multi-tab terminal UI (up to 8 simultaneous sessions per server)
-- [~] Tab bar: add tab (+), close tab (×), tab titles (auto-named "Terminal 1", "Terminal 2", etc.)
-- [~] Full interactive PTY shell via JSch shell channel
-- [~] Terminal emulator: render ANSI escape codes (colors, bold, cursor movement)
-- [~] Terminal composable: fixed-width font, scrollable, auto-scroll to bottom
-- [~] Extended keyboard row: Tab, Ctrl, Alt, Esc, ↑ ↓ ← →, PgUp, PgDn, Home, End, pipe |, ~, /
-- [ ] Copy text: long-press to select, copy to clipboard
-- [ ] Paste: from clipboard via extended keyboard button
-- [ ] Terminal font size adjustable (pinch to zoom or +/- buttons)
-- [~] Keep-alive ping every 30s to prevent SSH timeout
-- [~] Reconnect on disconnect with user prompt
-- [~] Session state preserved when navigating away (ViewModel-scoped coroutines)
-- [ ] Terminal color themes: Dark (default), Solarized, Dracula, Light
+- [x] Multi-tab terminal UI (up to 8 simultaneous sessions per server)
+- [x] Tab bar: add tab (+), close tab (×), tab titles (auto-named "Terminal 1", "Terminal 2", etc.)
+- [x] Full interactive PTY shell via JSch shell channel
+- [x] Terminal emulator: render ANSI escape codes (colors, bold, cursor movement)
+- [x] Terminal composable: fixed-width font, scrollable, auto-scroll to bottom
+- [x] Extended keyboard row: Tab, Ctrl, Alt, Esc, ↑ ↓ ← →, PgUp, PgDn, Home, End, pipe |, ~, /
+- [x] Copy text: long-press to select, copy to clipboard
+- [x] Paste: from clipboard via extended keyboard button
+- [x] Terminal font size adjustable (pinch to zoom or +/- buttons)
+- [x] Keep-alive ping every 30s to prevent SSH timeout
+- [x] Reconnect on disconnect with user prompt
+- [x] Session state preserved when navigating away (ViewModel-scoped coroutines)
+- [x] Terminal color themes: Dark (default), Solarized, Dracula, Light
 
 ## Phase 16: Service Manager ✅
 - [x] List all systemd units (services, timers, sockets, mounts)

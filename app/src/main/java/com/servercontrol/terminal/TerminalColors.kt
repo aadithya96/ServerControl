@@ -1,7 +1,13 @@
 package com.servercontrol.terminal
 
 import androidx.compose.ui.graphics.Color
-import com.servercontrol.presentation.terminal.TerminalColorTheme
+
+enum class TerminalColorTheme(val displayName: String) {
+    DARK("Dark"),
+    SOLARIZED("Solarized"),
+    DRACULA("Dracula"),
+    LIGHT("Light")
+}
 
 data class TerminalColorScheme(
     val background: Color,
