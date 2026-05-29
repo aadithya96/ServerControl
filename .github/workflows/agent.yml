@@ -2,9 +2,13 @@ name: Go Agent CI
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'agent/**'
   pull_request:
+    branches:
+      - main
     paths:
       - 'agent/**'
 
