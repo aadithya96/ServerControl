@@ -3,7 +3,7 @@
 **A native Android app for monitoring and managing Linux servers in real-time.**
 
 ![Android](https://img.shields.io/badge/Android-26%2B-3DDC84?logo=android&logoColor=white)
-![Kotlin](https://img.shields.io/badge/Kotlin-1.9.x-7F52FF?logo=kotlin&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.0.x-7F52FF?logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material3-4285F4?logo=jetpackcompose&logoColor=white)
 ![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
@@ -107,7 +107,7 @@ All endpoints except `/health` require an `Authorization: Bearer <token>` header
 
 ### Prerequisites
 
-- Android Studio Hedgehog (2023.1.1) or later
+- Android Studio Ladybug (2024.2.1) or later
 - Android SDK 35 (compile), min SDK 26 (Android 8.0+)
 - JDK 17
 - Go 1.24+ (only needed to build the agent from source)
@@ -221,7 +221,7 @@ Open the repo root in Android Studio. Gradle will sync automatically.
 - Android Studio Hedgehog (2023.1.1) or newer
 - Compile SDK 35, min SDK 26
 - JDK 17 (`sourceCompatibility = JavaVersion.VERSION_17`)
-- Kotlin 1.9.x
+- Kotlin 2.0.x
 - KSP (annotation processing for Hilt + Room — replaces kapt)
 
 **No API keys or environment variables are needed.** All server connection details are stored in Room DB in the app's private data directory.
