@@ -1,6 +1,7 @@
 package com.servercontrol.data.remote.agent
 
 import com.servercontrol.data.remote.dto.*
+import com.servercontrol.domain.model.ServiceAction
 import com.servercontrol.domain.model.ServerProfile
 import com.servercontrol.util.Resource
 import okhttp3.OkHttpClient
@@ -107,6 +108,40 @@ class AgentDataSource {
                 FirewallToggleRequest(ruleId, enabled)
             )
         }
+
+    suspend fun getServices(
+        serverProfile: ServerProfile,
+        type: String? = null,
+        state: String? = null
+    ): Resource<ServicesResponseDto> =
+        safeCall { buildApi(serverProfile).getServices(type, state) }
+
+    suspend fun serviceAction(
+        serverProfile: ServerProfile,
+        name: String,
+        action: ServiceAction
+    ): Resource<ServiceActionResponseDto> =
+        safeCall {
+            buildApi(serverProfile).serviceAction(
+                name,
+                ServiceActionRequest(action.name.lowercase())
+            )
+        }
+
+    suspend fun getServiceLogs(
+        serverProfile: ServerProfile,
+        name: String,
+        lines: Int = 100
+    ): Resource<ServiceLogsResponseDto> =
+        safeCall { buildApi(serverProfile).getServiceLogs(name, lines) }
+
+    suspend fun getLogs(
+        serverProfile: ServerProfile,
+        source: String = "journal",
+        unit: String? = null,
+        lines: Int = 200
+    ): Resource<LogResponseDto> =
+        safeCall { buildApi(serverProfile).getLogs(source, unit, lines) }
 
     private suspend fun <T> safeCall(call: suspend () -> T): Resource<T> = try {
         Resource.Success(call())
