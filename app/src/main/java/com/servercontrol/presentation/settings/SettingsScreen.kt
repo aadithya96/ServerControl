@@ -256,14 +256,14 @@ fun SettingsScreen(
                 SettingsItem(
                     icon = Icons.Default.Info,
                     title = "App Version",
-                    subtitle = try { BuildConfig.VERSION_NAME } catch (e: Exception) { "1.0.0" }
+                    subtitle = BuildConfig.VERSION_NAME
                 )
             }
             item {
                 SettingsItem(
                     icon = Icons.Default.Code,
                     title = "Open Source Agent",
-                    subtitle = "github.com/aadithya96/servercontrol"
+                    subtitle = BuildConfig.GITHUB_URL
                 )
             }
             item { Spacer(Modifier.height(24.dp)) }

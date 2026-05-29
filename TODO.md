@@ -141,11 +141,11 @@
 - [x] Onboarding integrated into NavGraph (shown on first launch, skipped if done)
 - [x] Screen.kt updated with Onboarding route
 - [x] strings.xml: all required string resources added
-- [ ] App icon (adaptive icon)
-- [ ] Splash screen
-- [ ] ProGuard / R8 rules
+- [x] App icon (adaptive icon)
+- [x] Splash screen
+- [x] ProGuard / R8 rules
 - [ ] Screenshots for Play Store
-- [ ] Release build signing config
+- [x] Release build signing config
 
 ## Phase 15: SSH Terminal
 - [x] Multi-tab terminal UI (up to 8 simultaneous sessions per server)
