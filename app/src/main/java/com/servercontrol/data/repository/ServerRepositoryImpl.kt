@@ -34,6 +34,12 @@ class ServerRepositoryImpl @Inject constructor(
     override suspend fun getAllServers(): List<ServerProfile> =
         serverProfileDao.getAllServersOnce().map { it.toDomain() }
 
+    override suspend fun setServerGroup(serverId: Long, group: String) =
+        serverProfileDao.setServerGroup(serverId, group)
+
+    override fun getDistinctGroups(): Flow<List<String>> =
+        serverProfileDao.getDistinctGroups()
+
     override suspend fun testConnection(server: ServerProfile): Result<Long> {
         val start = System.currentTimeMillis()
         return try {

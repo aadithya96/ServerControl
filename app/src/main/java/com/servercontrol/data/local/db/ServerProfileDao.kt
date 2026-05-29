@@ -24,4 +24,10 @@ interface ServerProfileDao {
 
     @Query("SELECT * FROM server_profiles ORDER BY name ASC")
     suspend fun getAllServersOnce(): List<ServerProfileEntity>
+
+    @Query("UPDATE server_profiles SET groupName = :group WHERE id = :serverId")
+    suspend fun setServerGroup(serverId: Long, group: String)
+
+    @Query("SELECT DISTINCT groupName FROM server_profiles ORDER BY groupName ASC")
+    fun getDistinctGroups(): Flow<List<String>>
 }

@@ -11,7 +11,8 @@ data class ServerProfile(
     val sshUsername: String? = null,
     val sshPassword: String? = null,
     val sshPrivateKey: String? = null,
-    val isOnline: Boolean = false
+    val isOnline: Boolean = false,
+    val group: String = "default"
 )
 
 enum class AuthType {

@@ -23,4 +23,36 @@ sealed class Screen(val route: String) {
     data object Connections : Screen("connections/{serverId}") {
         fun createRoute(serverId: Long) = "connections/$serverId"
     }
+    data object Terminal : Screen("terminal/{serverId}") {
+        fun createRoute(serverId: Long) = "terminal/$serverId"
+    }
+    data object AgentInstaller : Screen("agent_installer/{serverId}") {
+        fun createRoute(serverId: Long) = "agent_installer/$serverId"
+    }
+    data object ServiceManager : Screen("service_manager/{serverId}") {
+        fun createRoute(serverId: Long) = "service_manager/$serverId"
+    }
+    data object LogViewer : Screen("log_viewer/{serverId}") {
+        fun createRoute(serverId: Long) = "log_viewer/$serverId"
+    }
+    data object MetricsHistory : Screen("metrics_history/{serverId}") {
+        fun createRoute(serverId: Long) = "metrics_history/$serverId"
+    }
+    data object Docker : Screen("docker/{serverId}") {
+        fun createRoute(serverId: Long) = "docker/$serverId"
+    }
+    data object QuickCommands : Screen("quick_commands/{serverId}") {
+        fun createRoute(serverId: Long) = "quick_commands/$serverId"
+    }
+    data object Security : Screen("security/{serverId}") {
+        fun createRoute(serverId: Long) = "security/$serverId"
+    }
+    data object Overview : Screen("overview")
+    data object QrShare : Screen("qr_share/{serverId}") {
+        fun createRoute(serverId: Long) = "qr_share/$serverId"
+    }
+    data object QrScan : Screen("qr_scan")
+    data object Bandwidth : Screen("bandwidth/{serverId}") {
+        fun createRoute(serverId: Long) = "bandwidth/$serverId"
+    }
 }

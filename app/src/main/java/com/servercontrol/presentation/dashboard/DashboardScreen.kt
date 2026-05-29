@@ -43,6 +43,14 @@ fun DashboardScreen(
     onNavigateToDisk: () -> Unit,
     onNavigateToFirewall: () -> Unit,
     onNavigateToConnections: () -> Unit,
+    onNavigateToTerminal: () -> Unit = {},
+    onNavigateToAgentInstaller: () -> Unit = {},
+    onNavigateToServices: () -> Unit = {},
+    onNavigateToLogs: () -> Unit = {},
+    onNavigateToMetricsHistory: () -> Unit = {},
+    onNavigateToDocker: () -> Unit = {},
+    onNavigateToQuickCommands: () -> Unit = {},
+    onNavigateToSecurity: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     LaunchedEffect(serverId) { viewModel.init(serverId) }
@@ -65,6 +73,20 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    var showOverflowMenu by remember { mutableStateOf(false) }
+                    IconButton(onClick = onNavigateToTerminal) {
+                        Icon(Icons.Default.Terminal, contentDescription = "Open Terminal")
+                    }
+                    IconButton(onClick = { showOverflowMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More")
+                    }
+                    DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Metrics History") },
+                            onClick = { showOverflowMenu = false; onNavigateToMetricsHistory() },
+                            leadingIcon = { Icon(Icons.Default.ShowChart, contentDescription = null) }
+                        )
+                    }
                     IconButton(onClick = viewModel::toggleAutoRefresh) {
                         Icon(
                             if (autoRefresh) Icons.Default.Sync else Icons.Default.SyncDisabled,
@@ -128,7 +150,12 @@ fun DashboardScreen(
                             onNavigateToProcesses = onNavigateToProcesses,
                             onNavigateToDisk = onNavigateToDisk,
                             onNavigateToFirewall = onNavigateToFirewall,
-                            onNavigateToConnections = onNavigateToConnections
+                            onNavigateToConnections = onNavigateToConnections,
+                            onNavigateToServices = onNavigateToServices,
+                            onNavigateToLogs = onNavigateToLogs,
+                            onNavigateToDocker = onNavigateToDocker,
+                            onNavigateToQuickCommands = onNavigateToQuickCommands,
+                            onNavigateToSecurity = onNavigateToSecurity
                         )
                     }
                 }
@@ -144,7 +171,12 @@ private fun DashboardContent(
     onNavigateToProcesses: () -> Unit,
     onNavigateToDisk: () -> Unit,
     onNavigateToFirewall: () -> Unit,
-    onNavigateToConnections: () -> Unit
+    onNavigateToConnections: () -> Unit,
+    onNavigateToServices: () -> Unit = {},
+    onNavigateToLogs: () -> Unit = {},
+    onNavigateToDocker: () -> Unit = {},
+    onNavigateToQuickCommands: () -> Unit = {},
+    onNavigateToSecurity: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -253,6 +285,36 @@ private fun DashboardContent(
                 modifier = Modifier.weight(1f)
             ) { Text("Firewall") }
         }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ElevatedButton(
+                onClick = onNavigateToServices,
+                modifier = Modifier.weight(1f)
+            ) { Text("Services") }
+            ElevatedButton(
+                onClick = onNavigateToLogs,
+                modifier = Modifier.weight(1f)
+            ) { Text("Logs") }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ElevatedButton(
+                onClick = onNavigateToDocker,
+                modifier = Modifier.weight(1f)
+            ) { Text("Docker") }
+            ElevatedButton(
+                onClick = onNavigateToQuickCommands,
+                modifier = Modifier.weight(1f)
+            ) { Text("Commands") }
+        }
+        ElevatedButton(
+            onClick = onNavigateToSecurity,
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Security") }
     }
 }
 

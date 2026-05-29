@@ -44,4 +44,11 @@ class ServerListViewModel @Inject constructor(
     fun selectServer(id: Long) {
         selectedServerId.value = id
     }
+
+    fun importServer(profile: ServerProfile) {
+        viewModelScope.launch {
+            // Import with id=0 so Room assigns a new ID
+            serverRepository.insertServer(profile.copy(id = 0))
+        }
+    }
 }

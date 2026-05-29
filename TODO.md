@@ -146,3 +146,95 @@
 - [ ] ProGuard / R8 rules
 - [ ] Screenshots for Play Store
 - [ ] Release build signing config
+
+## Phase 15: SSH Terminal
+- [~] Multi-tab terminal UI (up to 8 simultaneous sessions per server)
+- [~] Tab bar: add tab (+), close tab (×), tab titles (auto-named "Terminal 1", "Terminal 2", etc.)
+- [~] Full interactive PTY shell via JSch shell channel
+- [~] Terminal emulator: render ANSI escape codes (colors, bold, cursor movement)
+- [~] Terminal composable: fixed-width font, scrollable, auto-scroll to bottom
+- [~] Extended keyboard row: Tab, Ctrl, Alt, Esc, ↑ ↓ ← →, PgUp, PgDn, Home, End, pipe |, ~, /
+- [ ] Copy text: long-press to select, copy to clipboard
+- [ ] Paste: from clipboard via extended keyboard button
+- [ ] Terminal font size adjustable (pinch to zoom or +/- buttons)
+- [~] Keep-alive ping every 30s to prevent SSH timeout
+- [~] Reconnect on disconnect with user prompt
+- [~] Session state preserved when navigating away (ViewModel-scoped coroutines)
+- [ ] Terminal color themes: Dark (default), Solarized, Dracula, Light
+
+## Phase 16: Service Manager ✅
+- [x] List all systemd units (services, timers, sockets, mounts)
+- [x] Filter: All / Active / Failed / Inactive tabs
+- [x] Service row: name, description, active state, sub-state, enabled/disabled badge
+- [x] Actions: start / stop / restart / reload / enable / disable (with confirmation)
+- [x] View service logs inline: journalctl -u <service> -n 100 --no-pager
+- [x] Service detail screen: unit file path, exec start, environment, dependencies
+- [x] Search/filter by name
+- [x] Failed services highlighted in red at top
+- [x] Agent endpoint: GET /api/v1/services, POST /api/v1/services/{name}/action
+
+## Phase 17: Log Viewer ✅
+- [x] Source selector: systemd journal, /var/log/syslog, /var/log/auth.log, nginx, apache, custom path
+- [x] Real-time tail (SSE stream from agent or repeated SSH reads every 2s)
+- [x] Search with highlight (regex support)
+- [x] Log level color coding: ERROR=red, WARN=yellow, INFO=white, DEBUG=gray
+- [x] Line count badge, auto-scroll toggle
+- [x] Save/export log snippet to clipboard or share
+- [x] Agent endpoint: GET /api/v1/logs?source=journal&unit=nginx&lines=200&follow=true (SSE)
+
+## Phase 18: Metrics History ✅
+- [x] Room table: MetricSample(id, serverId, timestamp, cpuPercent, memUsedBytes, diskUsedBytes)
+- [x] Background worker samples every N minutes (configurable), stores to Room
+- [x] Dashboard history charts: 1h / 6h / 24h / 7d time range selector
+- [x] Line chart for CPU%, area chart for RAM using Canvas (no library)
+- [x] Disk usage trend per mount
+- [x] Export CSV of metrics
+
+## Phase 19: Docker Integration ✅
+- [x] Agent endpoints: GET /api/v1/docker/containers, GET /api/v1/docker/images
+- [x] POST /api/v1/docker/containers/{id}/action (start/stop/restart/remove)
+- [x] GET /api/v1/docker/containers/{id}/logs (last N lines)
+- [x] Container list: name, image, status, ports, CPU%, MEM%
+- [x] Container detail: env vars, mounts, network, resource limits
+- [x] Image list: name, tag, size, created
+- [x] Container logs viewer (reuse Log Viewer component)
+
+## Phase 20: Quick Commands / Runbooks ✅
+- [x] Room table: SavedCommand(id, serverId?, name, command, description)
+- [x] Command library screen: list saved commands, add/edit/delete
+- [x] Run command button: SSH exec or POST /api/v1/exec to agent
+- [x] Output shown in bottom sheet with monospace font
+- [x] Built-in command templates: "Check disk", "Restart nginx", "Tail syslog", "Top 10 CPU processes"
+- [x] Import/export commands as JSON
+
+## Phase 21: Security & Audit ✅
+- [x] Failed SSH login monitor: parse /var/log/auth.log for failed attempts
+- [x] Top attacking IPs with attempt count, last seen, country (ip-api.com lookup)
+- [x] One-tap block IP via iptables (with confirmation)
+- [x] SSL certificate expiry monitor for domains/certs on server
+- [x] Local audit log: every app action (kill process, toggle firewall, restart service) logged with timestamp
+- [ ] Biometric lock: require fingerprint/PIN to open app
+
+## Phase 22: Widgets & Home Screen ✅
+- [x] 2×1 widget: server name + health dot (green/red) — ServerStatusWidget (Glance API)
+- [x] 4×2 widget: CPU bar, RAM bar, disk bar for one server — ServerMetricsWidget (Glance API)
+- [x] Widget config: choose server, choose metrics to show — WidgetConfigActivity (@AndroidEntryPoint)
+- [x] Glance API implementation — ServerStatusWidgetReceiver, ServerMetricsWidgetReceiver
+- [x] WidgetUpdaterWorker: periodic background update of widget state
+- [x] Widget XML provider files registered in AndroidManifest.xml
+
+## Phase 23: Multi-Server Dashboard & Groups ✅
+- [x] Server groups: tag servers — group field on ServerProfile/Entity + Room migration 4→5
+- [x] Overview screen: all servers side-by-side cards with key metrics — MultiServerOverviewScreen
+- [x] Compare mode: two servers' CPU/RAM side by side — ComparePanel in overview screen
+- [x] Tablet two-pane layout: adaptive layout based on screenWidthDp
+- [x] ServerGroupViewModel for group management
+- [x] Overview navigation entry in ServerListScreen TopAppBar
+
+## Phase 24: Integrations & Export ✅
+- [x] Webhook alerts: Slack/Discord/Telegram — WebhookService + SettingsScreen section + ServerMonitorWorker integration
+- [x] Server profile export (JSON) via share sheet — ProfileExporter + ServerListScreen overflow menu
+- [x] Import via QR code scan — QrScanScreen (CameraX + ML Kit), QrShareScreen, QrCodeUtil (ZXing)
+- [x] Bandwidth monitor: per-interface bytes in/out sparklines, 2s polling — BandwidthScreen + BandwidthViewModel
+- [x] BandwidthInfo domain model + BandwidthDto + AgentApi getBandwidth endpoint
+- [x] FileProvider for JSON/image sharing

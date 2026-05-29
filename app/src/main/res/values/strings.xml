@@ -69,4 +69,102 @@
     <string name="get_started">Get Started</string>
     <string name="next">Next</string>
     <string name="skip">Skip</string>
+    <!-- Terminal -->
+    <string name="terminal_title">Terminal</string>
+    <string name="add_tab">Add Tab</string>
+    <string name="close_tab">Close Tab</string>
+    <string name="send">Send</string>
+    <string name="extended_key_tab">Tab</string>
+    <string name="extended_key_ctrl">Ctrl</string>
+    <string name="extended_key_esc">Esc</string>
+    <string name="reconnect">Reconnect</string>
+    <string name="disconnected">Disconnected</string>
+    <!-- Agent Installer -->
+    <string name="agent_installer_title">Agent Installer</string>
+    <string name="install_agent">Install Agent</string>
+    <string name="uninstall_agent">Uninstall Agent</string>
+    <string name="applying_token">Applying token…</string>
+    <string name="token_copied">Token copied to clipboard</string>
+    <string name="agent_installed_success">Agent Installed Successfully!</string>
+    <string name="install_agent_confirm">Install the ServerControl agent on this server?</string>
+    <!-- Service Manager -->
+    <string name="services">Services</string>
+    <string name="service_manager_title">Service Manager</string>
+    <string name="service_filter_all">All</string>
+    <string name="service_filter_active">Active</string>
+    <string name="service_filter_failed">Failed</string>
+    <string name="service_filter_inactive">Inactive</string>
+    <string name="service_action_start">Start</string>
+    <string name="service_action_stop">Stop</string>
+    <string name="service_action_restart">Restart</string>
+    <string name="service_action_reload">Reload</string>
+    <string name="service_action_enable">Enable</string>
+    <string name="service_action_disable">Disable</string>
+    <string name="service_detail_load_state">Load State</string>
+    <string name="service_detail_active_state">Active State</string>
+    <string name="service_detail_sub_state">Sub State</string>
+    <string name="service_detail_type">Type</string>
+    <string name="service_detail_unit_file">Unit File</string>
+    <string name="service_detail_exec_start">ExecStart</string>
+    <string name="service_view_logs">View Logs</string>
+    <string name="search_services">Search services…</string>
+    <!-- Log Viewer -->
+    <string name="logs">Logs</string>
+    <string name="log_viewer_title">Log Viewer</string>
+    <string name="log_source_journal">System Journal</string>
+    <string name="log_source_syslog">Syslog</string>
+    <string name="log_source_auth">Auth Log</string>
+    <string name="log_source_nginx">Nginx Error</string>
+    <string name="log_source_apache">Apache Error</string>
+    <string name="log_source_custom">Custom Path…</string>
+    <string name="log_auto_scroll">Auto-scroll</string>
+    <string name="log_live">Live</string>
+    <string name="log_start_live">Start Live</string>
+    <string name="log_stop_live">Stop Live</string>
+    <string name="search_logs">Search logs…</string>
+    <string name="export_logs">Export Logs</string>
+    <!-- Metrics History -->
+    <string name="metrics_history">Metrics History</string>
+    <string name="metrics_history_title">Metrics History</string>
+    <string name="metrics_time_1h">1h</string>
+    <string name="metrics_time_6h">6h</string>
+    <string name="metrics_time_24h">24h</string>
+    <string name="metrics_time_7d">7d</string>
+    <string name="metrics_cpu_section">CPU Usage</string>
+    <string name="metrics_memory_section">Memory Usage</string>
+    <string name="metrics_disk_section">Disk Usage</string>
+    <string name="metrics_no_data">No data yet — metrics are collected in the background</string>
+    <string name="metrics_export_csv">Export CSV</string>
+    <string name="metrics_min">Min</string>
+    <string name="metrics_avg">Avg</string>
+    <string name="metrics_max">Max</string>
+    <!-- Widgets -->
+    <string name="widget_status_description">Shows server name and health status</string>
+    <string name="widget_metrics_description">Shows CPU, RAM, and disk usage bars</string>
+    <string name="widget_config_title">Select Server for Widget</string>
+    <!-- Overview / Multi-server -->
+    <string name="overview_title">Overview</string>
+    <string name="compare_mode">Compare Mode</string>
+    <string name="select_two_servers">Select 2 servers to compare</string>
+    <string name="group_all">All</string>
+    <!-- QR -->
+    <string name="qr_share_title">Share as QR Code</string>
+    <string name="qr_scan_title">Scan QR Code</string>
+    <string name="qr_credentials_note">Credentials not included — you\'ll need to re-enter your token or SSH password when importing.</string>
+    <!-- Export / Import -->
+    <string name="export_profiles">Export Profiles</string>
+    <string name="import_profiles">Import Profiles</string>
+    <!-- Bandwidth -->
+    <string name="bandwidth_title">Bandwidth</string>
+    <string name="bandwidth_download">Download</string>
+    <string name="bandwidth_upload">Upload</string>
+    <!-- Webhook -->
+    <string name="webhook_alerts">Webhook Alerts</string>
+    <string name="webhook_type">Webhook Type</string>
+    <string name="webhook_url">Webhook URL</string>
+    <string name="webhook_test">Test Webhook</string>
+    <string name="webhook_none">None</string>
+    <string name="webhook_slack">Slack</string>
+    <string name="webhook_discord">Discord</string>
+    <string name="webhook_telegram">Telegram</string>
 </resources>

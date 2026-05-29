@@ -11,4 +11,6 @@ interface ServerRepository {
     suspend fun deleteServer(server: ServerProfile)
     suspend fun testConnection(server: ServerProfile): Result<Long>
     suspend fun getAllServers(): List<ServerProfile>
+    suspend fun setServerGroup(serverId: Long, group: String)
+    fun getDistinctGroups(): kotlinx.coroutines.flow.Flow<List<String>>
 }

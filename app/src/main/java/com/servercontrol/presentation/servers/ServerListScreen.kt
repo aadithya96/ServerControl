@@ -1,5 +1,8 @@
 package com.servercontrol.presentation.servers
 
+import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -10,6 +13,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.VpnKey
@@ -18,11 +29,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.servercontrol.domain.model.AuthType
 import com.servercontrol.domain.model.ServerProfile
 import com.servercontrol.presentation.theme.CpuGood
+import com.servercontrol.util.ProfileExporter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,18 +43,76 @@ fun ServerListScreen(
     onServerClick: (Long) -> Unit,
     onAddServer: () -> Unit,
     onSettingsClick: () -> Unit,
+    onOpenTerminal: (Long) -> Unit = {},
+    onInstallAgent: (Long) -> Unit = {},
+    onEditServer: (Long) -> Unit = {},
+    onOverview: () -> Unit = {},
+    onShareQr: (Long) -> Unit = {},
+    onScanQr: () -> Unit = {},
+    onExportProfiles: () -> Unit = {},
+    onImportProfiles: () -> Unit = {},
     viewModel: ServerListViewModel = hiltViewModel()
 ) {
     val servers by viewModel.servers.collectAsState()
     var serverToDelete by remember { mutableStateOf<ServerProfile?>(null) }
+    var showOverflowMenu by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            val json = try {
+                context.contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: ""
+            } catch (e: Exception) { "" }
+            if (json.isNotBlank()) {
+                val profiles = ProfileExporter.importFromJson(json)
+                profiles.forEach { profile ->
+                    viewModel.importServer(profile)
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("ServerControl") },
                 actions = {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    IconButton(onClick = onOverview) {
+                        Icon(Icons.Default.GridView, contentDescription = "Overview")
+                    }
+                    IconButton(onClick = onScanQr) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR")
+                    }
+                    IconButton(onClick = { showOverflowMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More")
+                    }
+                    DropdownMenu(
+                        expanded = showOverflowMenu,
+                        onDismissRequest = { showOverflowMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Export Profiles") },
+                            onClick = {
+                                showOverflowMenu = false
+                                ProfileExporter.shareProfiles(context, servers)
+                            },
+                            leadingIcon = { Icon(Icons.Default.IosShare, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Import Profiles") },
+                            onClick = {
+                                showOverflowMenu = false
+                                importLauncher.launch(arrayOf("application/json", "*/*"))
+                            },
+                            leadingIcon = { Icon(Icons.Default.FileUpload, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Settings") },
+                            onClick = { showOverflowMenu = false; onSettingsClick() },
+                            leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
+                        )
                     }
                 }
             )
@@ -94,7 +165,11 @@ fun ServerListScreen(
                             viewModel.selectServer(server.id)
                             onServerClick(server.id)
                         },
-                        onDelete = { serverToDelete = server }
+                        onDelete = { serverToDelete = server },
+                        onOpenTerminal = { onOpenTerminal(server.id) },
+                        onInstallAgent = { onInstallAgent(server.id) },
+                        onEdit = { onEditServer(server.id) },
+                        onShareQr = { onShareQr(server.id) }
                     )
                 }
             }
@@ -126,8 +201,13 @@ fun ServerListScreen(
 private fun ServerCard(
     server: ServerProfile,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onOpenTerminal: () -> Unit = {},
+    onInstallAgent: () -> Unit = {},
+    onEdit: () -> Unit = {},
+    onShareQr: () -> Unit = {}
 ) {
+    var showMenu by remember { mutableStateOf(false) }
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -200,12 +280,48 @@ private fun ServerCard(
                 ) {}
             }
 
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error
-                )
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Open Terminal") },
+                        onClick = { showMenu = false; onOpenTerminal() },
+                        leadingIcon = { Icon(Icons.Default.Terminal, contentDescription = null) }
+                    )
+                    if (server.authType == AuthType.SSH_PASSWORD || server.authType == AuthType.SSH_KEY) {
+                        DropdownMenuItem(
+                            text = { Text("Install Agent") },
+                            onClick = { showMenu = false; onInstallAgent() },
+                            leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) }
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text("Share as QR") },
+                        onClick = { showMenu = false; onShareQr() },
+                        leadingIcon = { Icon(Icons.Default.QrCode, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Edit") },
+                        onClick = { showMenu = false; onEdit() },
+                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                        onClick = { showMenu = false; onDelete() },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    )
+                }
             }
         }
     }

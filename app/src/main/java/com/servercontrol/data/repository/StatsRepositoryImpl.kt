@@ -6,7 +6,11 @@ import com.servercontrol.data.remote.agent.AgentDataSource
 import com.servercontrol.data.remote.dto.*
 import com.servercontrol.data.remote.ssh.SshDataSource
 import com.servercontrol.domain.model.*
+import com.servercontrol.domain.model.LogEntry
+import com.servercontrol.domain.model.ServiceAction
+import com.servercontrol.domain.model.SystemService
 import com.servercontrol.domain.repository.StatsRepository
+import com.servercontrol.util.LogParser
 import com.servercontrol.util.Resource
 import javax.inject.Inject
 
@@ -221,6 +225,115 @@ class StatsRepositoryImpl @Inject constructor(
             else -> sshDataSource.killProcess(server, pid).fold(
                 onSuccess = { Resource.Success(Unit) },
                 onFailure = { Resource.Error(it.message ?: "SSH kill failed", it) }
+            )
+        }
+    }
+
+    override suspend fun getServices(serverId: Long, type: String?, state: String?): Resource<List<SystemService>> {
+        val server = getServer(serverId) ?: return Resource.Error("Server not found")
+        return when (server.authType) {
+            AuthType.AGENT_TOKEN -> {
+                when (val result = agentDataSource.getServices(server, type, state)) {
+                    is Resource.Success -> Resource.Success(result.data.services.map { it.toDomain() })
+                    is Resource.Error -> {
+                        if (server.sshUsername != null) {
+                            sshDataSource.getServices(server).fold(
+                                onSuccess = { services ->
+                                    var filtered = services
+                                    if (type != null && type != "all") filtered = filtered.filter { it.type == type }
+                                    if (state != null && state != "all") filtered = filtered.filter { it.activeState == state }
+                                    Resource.Success(filtered)
+                                },
+                                onFailure = { Resource.Error(result.message, result.throwable) }
+                            )
+                        } else Resource.Error(result.message, result.throwable)
+                    }
+                    is Resource.Loading -> Resource.Loading
+                }
+            }
+            else -> sshDataSource.getServices(server).fold(
+                onSuccess = { services ->
+                    var filtered = services
+                    if (type != null && type != "all") filtered = filtered.filter { it.type == type }
+                    if (state != null && state != "all") filtered = filtered.filter { it.activeState == state }
+                    Resource.Success(filtered)
+                },
+                onFailure = { Resource.Error(it.message ?: "SSH services failed", it) }
+            )
+        }
+    }
+
+    override suspend fun serviceAction(serverId: Long, name: String, action: ServiceAction): Resource<String> {
+        val server = getServer(serverId) ?: return Resource.Error("Server not found")
+        return when (server.authType) {
+            AuthType.AGENT_TOKEN -> {
+                when (val result = agentDataSource.serviceAction(server, name, action)) {
+                    is Resource.Success -> {
+                        if (result.data.success) Resource.Success(result.data.message)
+                        else Resource.Error(result.data.message)
+                    }
+                    is Resource.Error -> {
+                        if (server.sshUsername != null) {
+                            sshDataSource.serviceAction(server, name, action).fold(
+                                onSuccess = { Resource.Success(it) },
+                                onFailure = { Resource.Error(result.message, result.throwable) }
+                            )
+                        } else Resource.Error(result.message, result.throwable)
+                    }
+                    is Resource.Loading -> Resource.Loading
+                }
+            }
+            else -> sshDataSource.serviceAction(server, name, action).fold(
+                onSuccess = { Resource.Success(it) },
+                onFailure = { Resource.Error(it.message ?: "SSH service action failed", it) }
+            )
+        }
+    }
+
+    override suspend fun getServiceLogs(serverId: Long, name: String, lines: Int): Resource<List<String>> {
+        val server = getServer(serverId) ?: return Resource.Error("Server not found")
+        return when (server.authType) {
+            AuthType.AGENT_TOKEN -> {
+                when (val result = agentDataSource.getServiceLogs(server, name, lines)) {
+                    is Resource.Success -> Resource.Success(result.data.lines)
+                    is Resource.Error -> {
+                        if (server.sshUsername != null) {
+                            sshDataSource.getServiceLogs(server, name, lines).fold(
+                                onSuccess = { Resource.Success(it) },
+                                onFailure = { Resource.Error(result.message, result.throwable) }
+                            )
+                        } else Resource.Error(result.message, result.throwable)
+                    }
+                    is Resource.Loading -> Resource.Loading
+                }
+            }
+            else -> sshDataSource.getServiceLogs(server, name, lines).fold(
+                onSuccess = { Resource.Success(it) },
+                onFailure = { Resource.Error(it.message ?: "SSH service logs failed", it) }
+            )
+        }
+    }
+
+    override suspend fun getLogs(serverId: Long, source: String, unit: String?, lines: Int): Resource<List<LogEntry>> {
+        val server = getServer(serverId) ?: return Resource.Error("Server not found")
+        return when (server.authType) {
+            AuthType.AGENT_TOKEN -> {
+                when (val result = agentDataSource.getLogs(server, source, unit, lines)) {
+                    is Resource.Success -> Resource.Success(LogParser.parse(result.data.lines))
+                    is Resource.Error -> {
+                        if (server.sshUsername != null) {
+                            sshDataSource.getLogs(server, source, unit, lines).fold(
+                                onSuccess = { Resource.Success(LogParser.parse(it)) },
+                                onFailure = { Resource.Error(result.message, result.throwable) }
+                            )
+                        } else Resource.Error(result.message, result.throwable)
+                    }
+                    is Resource.Loading -> Resource.Loading
+                }
+            }
+            else -> sshDataSource.getLogs(server, source, unit, lines).fold(
+                onSuccess = { Resource.Success(LogParser.parse(it)) },
+                onFailure = { Resource.Error(it.message ?: "SSH logs failed", it) }
             )
         }
     }

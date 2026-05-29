@@ -4,6 +4,10 @@ import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
 import com.servercontrol.domain.model.*
+import com.servercontrol.domain.model.DockerAction
+import com.servercontrol.domain.model.DockerContainer
+import com.servercontrol.domain.model.DockerImage
+import com.servercontrol.domain.model.FailedLoginAttempt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -205,6 +209,224 @@ class SshDataSource @Inject constructor() {
                     // Since we can't easily re-insert without rule spec, we note this limitation
                     throw UnsupportedOperationException("Re-enabling rules via SSH requires rule spec. Use agent mode.")
                 }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun getServices(profile: ServerProfile): Result<List<SystemService>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val output = exec(session, "systemctl list-units --all --no-pager --no-legend 2>/dev/null")
+                val unitFiles = exec(session, "systemctl list-unit-files --no-pager --no-legend 2>/dev/null")
+
+                // Build enabled map from unit-files output
+                val enabledMap = mutableMapOf<String, String>()
+                unitFiles.lines().filter { it.isNotBlank() }.forEach { line ->
+                    val parts = line.trim().split("\\s+".toRegex())
+                    if (parts.size >= 2) {
+                        enabledMap[parts[0]] = parts[1]
+                    }
+                }
+
+                output.lines().filter { it.isNotBlank() }.mapNotNull { line ->
+                    // UNIT LOAD ACTIVE SUB DESCRIPTION (description is rest)
+                    val parts = line.trim().split("\\s+".toRegex(), limit = 5)
+                    if (parts.size < 4) return@mapNotNull null
+                    val unit = parts[0]
+                    val load = parts[1]
+                    val active = parts[2]
+                    val sub = parts[3]
+                    val desc = if (parts.size >= 5) parts[4] else ""
+                    val enabledState = enabledMap[unit] ?: "static"
+                    val type = when {
+                        unit.endsWith(".service") -> "service"
+                        unit.endsWith(".timer") -> "timer"
+                        unit.endsWith(".socket") -> "socket"
+                        unit.endsWith(".mount") -> "mount"
+                        unit.endsWith(".target") -> "target"
+                        else -> "other"
+                    }
+                    SystemService(
+                        name = unit,
+                        description = desc,
+                        loadState = load,
+                        activeState = active,
+                        subState = sub,
+                        enabled = enabledState == "enabled",
+                        unitFilePath = "",
+                        execStart = "",
+                        type = type
+                    )
+                }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun serviceAction(profile: ServerProfile, name: String, action: ServiceAction): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val actionStr = action.name.lowercase()
+                exec(session, "sudo systemctl $actionStr $name 2>&1")
+                "Service $name: $actionStr completed"
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun getServiceLogs(profile: ServerProfile, name: String, lines: Int = 100): Result<List<String>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val output = exec(session, "journalctl -u $name -n $lines --no-pager 2>/dev/null")
+                output.lines().filter { it.isNotBlank() }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun getLogs(profile: ServerProfile, source: String, unit: String?, lines: Int = 200): Result<List<String>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val cmd = when (source) {
+                    "journal" -> if (unit != null && unit.isNotBlank())
+                        "journalctl -u $unit -n $lines --no-pager 2>/dev/null"
+                    else
+                        "journalctl -n $lines --no-pager 2>/dev/null"
+                    "syslog" -> "tail -n $lines /var/log/syslog 2>/dev/null"
+                    "auth" -> "tail -n $lines /var/log/auth.log 2>/dev/null"
+                    "nginx" -> "tail -n $lines /var/log/nginx/error.log 2>/dev/null"
+                    "apache" -> "tail -n $lines /var/log/apache2/error.log 2>/dev/null"
+                    "custom" -> if (unit != null && unit.isNotBlank())
+                        "tail -n $lines $unit 2>/dev/null"
+                    else "echo 'No path specified'"
+                    else -> "journalctl -n $lines --no-pager 2>/dev/null"
+                }
+                val output = exec(session, cmd)
+                output.lines().filter { it.isNotBlank() }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun getDockerContainers(profile: ServerProfile): Result<List<DockerContainer>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val output = exec(session,
+                    "docker ps -a --format \"{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.State}}\" 2>/dev/null")
+                output.lines().filter { it.isNotBlank() }.mapNotNull { line ->
+                    val fields = line.split("\t")
+                    if (fields.size < 5) return@mapNotNull null
+                    DockerContainer(
+                        id = fields[0],
+                        shortId = fields[0].take(12),
+                        name = fields[1].trimStart('/'),
+                        image = fields[2],
+                        status = fields[3],
+                        state = fields[4],
+                        created = 0L,
+                        ports = emptyList(),
+                        cpuPercent = 0.0,
+                        memUsedBytes = 0L,
+                        memLimitBytes = 0L,
+                        networkRxBytes = 0L,
+                        networkTxBytes = 0L,
+                        mounts = emptyList(),
+                        envVars = emptyList()
+                    )
+                }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun getDockerImages(profile: ServerProfile): Result<List<DockerImage>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val output = exec(session,
+                    "docker images --format \"{{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.Size}}\" 2>/dev/null")
+                output.lines().filter { it.isNotBlank() }.mapNotNull { line ->
+                    val fields = line.split("\t")
+                    if (fields.size < 2) return@mapNotNull null
+                    DockerImage(id = fields[0], tags = listOf(fields[1]), sizeBytes = 0L, created = 0L)
+                }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun dockerContainerAction(profile: ServerProfile, id: String, action: DockerAction): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val actionStr = action.name.lowercase()
+                exec(session, "docker $actionStr $id 2>&1")
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun getDockerContainerLogs(profile: ServerProfile, id: String, lines: Int = 100): Result<List<String>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val output = exec(session, "docker logs --tail $lines $id 2>&1")
+                output.lines().filter { it.isNotBlank() }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun executeCommand(profile: ServerProfile, command: String): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                exec(session, command)
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun getFailedLogins(profile: ServerProfile, limit: Int = 50): Result<List<FailedLoginAttempt>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val output = exec(session,
+                    "grep 'Failed password' /var/log/auth.log 2>/dev/null | awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | head -$limit")
+                output.lines().filter { it.isNotBlank() }.mapNotNull { line ->
+                    val parts = line.trim().split("\\s+".toRegex())
+                    if (parts.size < 2) return@mapNotNull null
+                    val count = parts[0].toIntOrNull() ?: return@mapNotNull null
+                    val ip = parts[1]
+                    FailedLoginAttempt(timestamp = "", username = "unknown", sourceIp = ip, count = count)
+                }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun blockIp(profile: ServerProfile, ip: String): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                exec(session, "sudo iptables -I INPUT -s $ip -j DROP 2>&1")
             } finally {
                 session.disconnect()
             }

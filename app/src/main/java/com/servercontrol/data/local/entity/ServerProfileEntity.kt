@@ -17,7 +17,8 @@ data class ServerProfileEntity(
     val agentToken: String? = null,
     val sshUsername: String? = null,
     val sshPassword: String? = null,
-    val sshPrivateKey: String? = null
+    val sshPrivateKey: String? = null,
+    val groupName: String = "default"
 )
 
 fun ServerProfileEntity.toDomain(): ServerProfile = ServerProfile(
@@ -30,7 +31,8 @@ fun ServerProfileEntity.toDomain(): ServerProfile = ServerProfile(
     agentToken = agentToken,
     sshUsername = sshUsername,
     sshPassword = sshPassword,
-    sshPrivateKey = sshPrivateKey
+    sshPrivateKey = sshPrivateKey,
+    group = groupName
 )
 
 fun ServerProfile.toEntity(): ServerProfileEntity = ServerProfileEntity(
@@ -43,5 +45,6 @@ fun ServerProfile.toEntity(): ServerProfileEntity = ServerProfileEntity(
     agentToken = agentToken,
     sshUsername = sshUsername,
     sshPassword = sshPassword,
-    sshPrivateKey = sshPrivateKey
+    sshPrivateKey = sshPrivateKey,
+    groupName = group
 )

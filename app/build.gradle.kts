@@ -106,4 +106,17 @@ dependencies {
     ksp(libs.hilt.work.compiler)
 
     debugImplementation(libs.androidx.ui.tooling)
+
+    // Glance Widgets
+    implementation("androidx.glance:glance-appwidget:1.0.0")
+    implementation("androidx.glance:glance-material3:1.0.0")
+
+    // ZXing QR code generation
+    implementation("com.google.zxing:core:3.5.2")
+
+    // CameraX + ML Kit for QR scanning
+    implementation("androidx.camera:camera-camera2:1.3.1")
+    implementation("androidx.camera:camera-lifecycle:1.3.1")
+    implementation("androidx.camera:camera-view:1.3.1")
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
 }
