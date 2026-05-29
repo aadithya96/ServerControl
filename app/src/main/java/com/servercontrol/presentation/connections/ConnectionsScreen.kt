@@ -1,5 +1,6 @@
 package com.servercontrol.presentation.connections
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,7 +25,7 @@ import com.servercontrol.presentation.components.ErrorState
 import com.servercontrol.presentation.components.LoadingSpinner
 import com.servercontrol.util.Resource
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ConnectionsScreen(
     serverId: Long,

@@ -67,7 +67,7 @@ class TerminalManager @Inject constructor() {
             val channel = jschSession.openChannel("shell") as ChannelShell
             channel.setPtyType("xterm-256color")
             channel.setPtySize(80, 24, 640, 480)
-            channel.isAgentForwarding = false
+            channel.setAgentForwarding(false)
 
             val outputStream = channel.outputStream
             val inputStream = channel.inputStream

@@ -2,6 +2,7 @@ package com.servercontrol.presentation.overview
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -24,6 +25,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -196,8 +198,11 @@ private fun ServerOverviewCard(
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        border = if (isSelected) CardDefaults.outlinedCardBorder() else null
+            .clickable(onClick = onClick)
+            .then(
+                if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CardDefaults.elevatedShape)
+                else Modifier
+            )
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -298,13 +303,13 @@ private fun MiniArcGauge(percent: Double) {
         )
         // Center text - draw manually
         val text = "${"%.0f".format(percent)}%"
-        drawContext.canvas.nativeCanvas.apply {
+        drawIntoCanvas { canvas ->
             val paint = android.graphics.Paint().apply {
                 textAlign = android.graphics.Paint.Align.CENTER
                 textSize = 10.dp.toPx()
                 this.color = android.graphics.Color.WHITE
             }
-            drawText(text, size.width / 2f, size.height / 2f + paint.textSize / 3f, paint)
+            canvas.nativeCanvas.drawText(text, size.width / 2f, size.height / 2f + paint.textSize / 3f, paint)
         }
     }
 }

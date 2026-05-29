@@ -47,7 +47,7 @@ class ServerRepositoryImpl @Inject constructor(
         try {
             when (server.authType) {
                 AuthType.AGENT_TOKEN -> {
-                    agentDataSource.getSystemStats(server)
+                    agentDataSource.testConnection(server)
                     Result.success(System.currentTimeMillis() - start)
                 }
                 else -> {
