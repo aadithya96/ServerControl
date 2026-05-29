@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Server rack icon in center, inset to safe zone (18dp padding each side) -->
+    <!-- Outer server body -->
+    <path
+        android:fillColor="#58A6FF"
+        android:pathData="M26,30 L82,30 Q84,30 84,32 L84,76 Q84,78 82,78 L26,78 Q24,78 24,76 L24,32 Q24,30 26,30 Z" />
+    <!-- Server unit 1 -->
+    <path
+        android:fillColor="#0D1117"
+        android:pathData="M28,35 L80,35 L80,46 L28,46 Z" />
+    <!-- Status dot 1 - green -->
+    <path
+        android:fillColor="#3FB950"
+        android:pathData="M33,40.5 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" />
+    <!-- Server unit 2 -->
+    <path
+        android:fillColor="#0D1117"
+        android:pathData="M28,50 L80,50 L80,61 L28,61 Z" />
+    <!-- Status dot 2 - green -->
+    <path
+        android:fillColor="#3FB950"
+        android:pathData="M33,55.5 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" />
+    <!-- Server unit 3 -->
+    <path
+        android:fillColor="#0D1117"
+        android:pathData="M28,65 L80,65 L80,74 L28,74 Z" />
+    <!-- Status dot 3 - yellow -->
+    <path
+        android:fillColor="#D29922"
+        android:pathData="M33,69.5 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" />
+    <!-- Terminal prompt symbol ">_" on first unit -->
+    <path
+        android:fillColor="#3FB950"
+        android:pathData="M39,38 L43,40.5 L39,43 M44,43 L48,43"
+        android:strokeColor="#3FB950"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+</vector>
