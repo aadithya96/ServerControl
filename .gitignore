@@ -26,3 +26,9 @@ captures/
 
 # Agent build artifacts
 agent/servercontrol-agent
+
+# Signing
+*.jks
+*.keystore
+keystore.properties
+release.jks

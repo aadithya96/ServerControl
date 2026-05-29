@@ -10,45 +10,47 @@ import androidx.compose.ui.text.style.TextDecoration
 
 object AnsiParser {
 
-    private val ansiColors = mapOf(
-        30 to Color(0xFF000000),
-        31 to Color(0xFFFF5555),
-        32 to Color(0xFF55FF55),
-        33 to Color(0xFFFFFF55),
-        34 to Color(0xFF5555FF),
-        35 to Color(0xFFFF55FF),
-        36 to Color(0xFF55FFFF),
-        37 to Color(0xFFFFFFFF),
-        90 to Color(0xFF777777),
-        91 to Color(0xFFFF7777),
-        92 to Color(0xFF77FF77),
-        93 to Color(0xFFFFFF77),
-        94 to Color(0xFF7777FF),
-        95 to Color(0xFFFF77FF),
-        96 to Color(0xFF77FFFF),
-        97 to Color(0xFFFFFFFF),
-    )
+    private const val ESC = ""
 
-    private val bgColors = mapOf(
-        40 to Color(0xFF000000),
-        41 to Color(0xFFFF5555),
-        42 to Color(0xFF55FF55),
-        43 to Color(0xFFFFFF55),
-        44 to Color(0xFF5555FF),
-        45 to Color(0xFFFF55FF),
-        46 to Color(0xFF55FFFF),
-        47 to Color(0xFFFFFFFF),
-    )
+    // ESC sequence regex: ESC [ <params> <command>
+    private val escapeRegex = Regex("${Regex.escape(ESC)}\\[([0-9;]*)([A-Za-z])")
 
-    // ESC sequence regex: ESC [ ... m  or  ESC [ ... H/J/K/etc
-    private val escapeRegex = Regex("\\[([0-9;]*)([A-Za-z])")
-
-    fun parse(raw: String): AnnotatedString {
-        // Strip clear screen sequences and handle cursor movement by stripping them
+    fun parse(raw: String, colors: TerminalColorScheme = TerminalThemes.DARK): AnnotatedString {
+        // Strip clear screen / cursor reset sequences before parsing colour codes
         val cleaned = raw
-            .replace("[2J", "")
-            .replace("[H", "")
-            .replace("[3J", "")
+            .replace("$ESC[2J", "")
+            .replace("$ESC[H", "")
+            .replace("$ESC[3J", "")
+
+        val ansiColors = mapOf(
+            30 to colors.black,
+            31 to colors.red,
+            32 to colors.green,
+            33 to colors.yellow,
+            34 to colors.blue,
+            35 to colors.magenta,
+            36 to colors.cyan,
+            37 to colors.white,
+            90 to colors.brightBlack,
+            91 to colors.brightRed,
+            92 to colors.brightGreen,
+            93 to colors.brightYellow,
+            94 to colors.brightBlue,
+            95 to colors.brightMagenta,
+            96 to colors.brightCyan,
+            97 to colors.brightWhite,
+        )
+
+        val bgColors = mapOf(
+            40 to colors.black,
+            41 to colors.red,
+            42 to colors.green,
+            43 to colors.yellow,
+            44 to colors.blue,
+            45 to colors.magenta,
+            46 to colors.cyan,
+            47 to colors.white,
+        )
 
         return buildAnnotatedString {
             var bold = false

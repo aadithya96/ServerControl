@@ -31,8 +31,8 @@ class MetricsSamplerWorker @AssistedInject constructor(
 
             for (server in servers) {
                 try {
-                    // Fetch system stats for CPU and memory
-                    val stats = if (server.authType == AuthType.AGENT_TOKEN) {
+                    // Fetch system stats for CPU and memory — fetch SSH once for SSH servers
+                    val agentStats = if (server.authType == AuthType.AGENT_TOKEN) {
                         when (val r = agentDataSource.getStats(server)) {
                             is Resource.Success -> r.data
                             else -> null
@@ -41,15 +41,21 @@ class MetricsSamplerWorker @AssistedInject constructor(
                         null
                     }
 
-                    val cpuPercent = stats?.cpuPercent?.toFloat()
-                        ?: sshDataSource.getSystemStats(server).getOrNull()?.cpuPercent?.toFloat()
+                    val sshStats = if (agentStats == null) {
+                        sshDataSource.getSystemStats(server).getOrNull()
+                    } else {
+                        null
+                    }
+
+                    val cpuPercent = agentStats?.cpuPercent?.toFloat()
+                        ?: sshStats?.cpuPercent?.toFloat()
                         ?: continue
 
-                    val memUsed = stats?.memUsedBytes?.toLong()
-                        ?: sshDataSource.getSystemStats(server).getOrNull()?.memUsedBytes
+                    val memUsed = agentStats?.memUsedBytes?.toLong()
+                        ?: sshStats?.memUsedBytes
                         ?: 0L
-                    val memTotal = stats?.memTotalBytes?.toLong()
-                        ?: sshDataSource.getSystemStats(server).getOrNull()?.memTotalBytes
+                    val memTotal = agentStats?.memTotalBytes?.toLong()
+                        ?: sshStats?.memTotalBytes
                         ?: 0L
 
                     // Fetch disk info for disk usage (sum of used/total across all mounts)

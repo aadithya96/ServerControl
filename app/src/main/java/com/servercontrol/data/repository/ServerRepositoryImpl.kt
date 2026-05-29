@@ -7,8 +7,10 @@ import com.servercontrol.data.remote.agent.AgentDataSource
 import com.servercontrol.domain.model.AuthType
 import com.servercontrol.domain.model.ServerProfile
 import com.servercontrol.domain.repository.ServerRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class ServerRepositoryImpl @Inject constructor(
@@ -40,9 +42,9 @@ class ServerRepositoryImpl @Inject constructor(
     override fun getDistinctGroups(): Flow<List<String>> =
         serverProfileDao.getDistinctGroups()
 
-    override suspend fun testConnection(server: ServerProfile): Result<Long> {
+    override suspend fun testConnection(server: ServerProfile): Result<Long> = withContext(Dispatchers.IO) {
         val start = System.currentTimeMillis()
-        return try {
+        try {
             when (server.authType) {
                 AuthType.AGENT_TOKEN -> {
                     agentDataSource.getSystemStats(server)

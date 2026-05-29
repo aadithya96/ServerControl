@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 type ProcessInfo struct {
@@ -257,7 +258,7 @@ func KillProcessHandler(w http.ResponseWriter, r *http.Request) {
 	case 9:
 		sendErr = proc.Kill()
 	default:
-		sendErr = proc.Signal(os.Interrupt)
+		sendErr = proc.Signal(syscall.Signal(sig))
 	}
 
 	w.Header().Set("Content-Type", "application/json")

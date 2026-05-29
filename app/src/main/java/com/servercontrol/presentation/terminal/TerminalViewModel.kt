@@ -1,5 +1,10 @@
 package com.servercontrol.presentation.terminal
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,21 +13,28 @@ import androidx.compose.ui.text.buildAnnotatedString
 import com.servercontrol.domain.repository.ServerRepository
 import com.servercontrol.terminal.AnsiParser
 import com.servercontrol.terminal.SessionState
+import com.servercontrol.terminal.TerminalColorTheme
 import com.servercontrol.terminal.TerminalManager
 import com.servercontrol.terminal.TerminalSession
+import com.servercontrol.terminal.TerminalThemes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private val KEY_FONT_SIZE = intPreferencesKey("terminal_font_size")
+private val KEY_COLOR_THEME = stringPreferencesKey("terminal_theme")
 
 @HiltViewModel
 class TerminalViewModel @Inject constructor(
     private val terminalManager: TerminalManager,
     private val serverRepository: ServerRepository,
+    private val dataStore: DataStore<Preferences>,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -43,6 +55,9 @@ class TerminalViewModel @Inject constructor(
     private val _fontSize = MutableStateFlow(13)
     val fontSize: StateFlow<Int> = _fontSize.asStateFlow()
 
+    private val _colorTheme = MutableStateFlow(TerminalColorTheme.DARK)
+    val colorTheme: StateFlow<TerminalColorTheme> = _colorTheme.asStateFlow()
+
     private val collectionJobs = mutableMapOf<String, Job>()
     private var tabCounter = 0
 
@@ -50,7 +65,17 @@ class TerminalViewModel @Inject constructor(
     private val rawBuffers = mutableMapOf<String, StringBuilder>()
 
     init {
-        addTab()
+        // Load persisted preferences, then open first tab
+        viewModelScope.launch {
+            val prefs = dataStore.data.first()
+            _fontSize.value = (prefs[KEY_FONT_SIZE] ?: 13).coerceIn(8, 32)
+            _colorTheme.value = try {
+                TerminalColorTheme.valueOf(prefs[KEY_COLOR_THEME] ?: "DARK")
+            } catch (_: IllegalArgumentException) {
+                TerminalColorTheme.DARK
+            }
+            addTab()
+        }
     }
 
     fun addTab() {
@@ -110,11 +135,11 @@ class TerminalViewModel @Inject constructor(
         // but we keep a cap to avoid unbounded growth
         val text = buffer.toString()
 
-        // Try to parse what we have; clear buffer after parsing
-        val parsed = AnsiParser.parse(text)
+        // Parse with current theme's color scheme
+        val parsed = AnsiParser.parse(text, TerminalThemes.forTheme(_colorTheme.value))
         buffer.clear()
 
-        // Append to session output, keeping max ~5000 chars of annotated string
+        // Append to session output, keeping max ~50000 chars of annotated string
         val current = _outputs.value[sessionId] ?: AnnotatedString("")
         val combined = buildAnnotatedString {
             // Trim from start if too long (keep last 50000 chars)
@@ -172,12 +197,26 @@ class TerminalViewModel @Inject constructor(
         terminalManager.sendInput(id, char.toString())
     }
 
+    fun setFontSize(size: Int) {
+        _fontSize.value = size.coerceIn(8, 32)
+        viewModelScope.launch {
+            dataStore.edit { it[KEY_FONT_SIZE] = _fontSize.value }
+        }
+    }
+
     fun increaseFontSize() {
-        _fontSize.value = (_fontSize.value + 1).coerceAtMost(24)
+        setFontSize(_fontSize.value + 1)
     }
 
     fun decreaseFontSize() {
-        _fontSize.value = (_fontSize.value - 1).coerceAtLeast(8)
+        setFontSize(_fontSize.value - 1)
+    }
+
+    fun setColorTheme(theme: TerminalColorTheme) {
+        _colorTheme.value = theme
+        viewModelScope.launch {
+            dataStore.edit { it[KEY_COLOR_THEME] = theme.name }
+        }
     }
 
     fun reconnect(sessionId: String) {

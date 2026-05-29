@@ -21,10 +21,11 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.servercontrol.BuildConfig
 import kotlinx.coroutines.launch
 
-private const val INSTALL_COMMAND =
-    "curl -sSL https://raw.githubusercontent.com/aadithya96/servercontrol/main/agent/install.sh | sudo bash"
+private val INSTALL_COMMAND =
+    "curl -sSL ${BuildConfig.INSTALL_SCRIPT_URL} | sudo bash"
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
