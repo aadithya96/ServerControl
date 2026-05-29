@@ -47,4 +47,12 @@ sealed class Screen(val route: String) {
     data object Security : Screen("security/{serverId}") {
         fun createRoute(serverId: Long) = "security/$serverId"
     }
+    data object Overview : Screen("overview")
+    data object QrShare : Screen("qr_share/{serverId}") {
+        fun createRoute(serverId: Long) = "qr_share/$serverId"
+    }
+    data object QrScan : Screen("qr_scan")
+    data object Bandwidth : Screen("bandwidth/{serverId}") {
+        fun createRoute(serverId: Long) = "bandwidth/$serverId"
+    }
 }

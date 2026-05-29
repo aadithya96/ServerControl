@@ -3,6 +3,9 @@ package com.servercontrol.widget
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -17,8 +20,8 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
@@ -36,28 +39,27 @@ class ServerMetricsWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
-            ServerMetricsWidgetContent(context)
+            ServerMetricsWidgetContent()
         }
     }
 }
 
 @Composable
-fun ServerMetricsWidgetContent(context: Context) {
+fun ServerMetricsWidgetContent() {
     val prefs = currentState<androidx.datastore.preferences.core.Preferences>()
-    val serverName = prefs[stringPreferencesKeyCompat("widget_server_name")] ?: "No server"
-    val cpuPercent = (prefs[floatPreferencesKeyCompat("widget_cpu_percent")] ?: 0f) / 100f
-    val ramPercent = (prefs[floatPreferencesKeyCompat("widget_ram_percent")] ?: 0f) / 100f
-    val diskPercent = (prefs[floatPreferencesKeyCompat("widget_disk_percent")] ?: 0f) / 100f
+    val serverName = prefs[stringPreferencesKey("widget_server_name")] ?: "No server"
+    val cpuPercent = (prefs[floatPreferencesKey("widget_cpu_percent")] ?: 0f) / 100f
+    val ramPercent = (prefs[floatPreferencesKey("widget_ram_percent")] ?: 0f) / 100f
+    val diskPercent = (prefs[floatPreferencesKey("widget_disk_percent")] ?: 0f) / 100f
 
     GlanceTheme {
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
                 .background(ColorProvider(Color(0xFF1E1E1E)))
-                .padding(12.dp_glance)
+                .padding(12.dp)
                 .clickable(actionStartActivity<MainActivity>())
         ) {
-            // Server name header
             Text(
                 text = serverName,
                 style = TextStyle(
@@ -67,19 +69,12 @@ fun ServerMetricsWidgetContent(context: Context) {
                 maxLines = 1
             )
 
-            Spacer(modifier = GlanceModifier.height(8.dp_glance))
+            Spacer(modifier = GlanceModifier.height(8.dp))
 
-            // CPU bar
             MetricBar(label = "CPU", progress = cpuPercent.coerceIn(0f, 1f))
-
-            Spacer(modifier = GlanceModifier.height(6.dp_glance))
-
-            // RAM bar
+            Spacer(modifier = GlanceModifier.height(6.dp))
             MetricBar(label = "RAM", progress = ramPercent.coerceIn(0f, 1f))
-
-            Spacer(modifier = GlanceModifier.height(6.dp_glance))
-
-            // Disk bar
+            Spacer(modifier = GlanceModifier.height(6.dp))
             MetricBar(label = "Dsk", progress = diskPercent.coerceIn(0f, 1f))
         }
     }
@@ -94,16 +89,16 @@ private fun MetricBar(label: String, progress: Float) {
         Text(
             text = label,
             style = TextStyle(color = ColorProvider(Color(0xFFAAAAAA))),
-            modifier = GlanceModifier.width(28.dp_glance)
+            modifier = GlanceModifier.width(28.dp)
         )
-        Spacer(modifier = GlanceModifier.width(4.dp_glance))
+        Spacer(modifier = GlanceModifier.width(4.dp))
         LinearProgressIndicator(
             progress = progress,
             modifier = GlanceModifier.defaultWeight(),
             color = ColorProvider(barColor(progress)),
             backgroundColor = ColorProvider(Color(0xFF3A3A3A))
         )
-        Spacer(modifier = GlanceModifier.width(4.dp_glance))
+        Spacer(modifier = GlanceModifier.width(4.dp))
         Text(
             text = "${"%.0f".format(progress * 100)}%",
             style = TextStyle(color = ColorProvider(Color(0xFFAAAAAA)))

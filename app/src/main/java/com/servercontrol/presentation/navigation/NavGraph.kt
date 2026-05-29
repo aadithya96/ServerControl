@@ -20,8 +20,12 @@ import com.servercontrol.presentation.logs.LogViewerScreen
 import com.servercontrol.presentation.metrics.MetricsHistoryScreen
 import com.servercontrol.presentation.onboarding.OnboardingScreen
 import com.servercontrol.presentation.processes.ProcessListScreen
+import com.servercontrol.presentation.network.BandwidthScreen
+import com.servercontrol.presentation.overview.MultiServerOverviewScreen
 import com.servercontrol.presentation.servers.AddServerScreen
 import com.servercontrol.presentation.servers.AgentInstallerScreen
+import com.servercontrol.presentation.servers.QrScanScreen
+import com.servercontrol.presentation.servers.QrShareScreen
 import com.servercontrol.presentation.servers.ServerListScreen
 import com.servercontrol.presentation.services.ServiceManagerScreen
 import com.servercontrol.presentation.settings.SettingsScreen
@@ -73,7 +77,18 @@ fun NavGraph() {
                 },
                 onEditServer = { serverId ->
                     navController.navigate(Screen.AddServer.createRoute(serverId))
-                }
+                },
+                onOverview = {
+                    navController.navigate(Screen.Overview.route)
+                },
+                onShareQr = { serverId ->
+                    navController.navigate(Screen.QrShare.createRoute(serverId))
+                },
+                onScanQr = {
+                    navController.navigate(Screen.QrScan.route)
+                },
+                onExportProfiles = { /* handled inside the screen via ProfileExporter */ },
+                onImportProfiles = { /* handled inside the screen via file picker */ }
             )
         }
 
@@ -217,6 +232,43 @@ fun NavGraph() {
         ) { backStackEntry ->
             val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
             SecurityScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Overview.route) {
+            MultiServerOverviewScreen(
+                onNavigateToServer = { serverId ->
+                    navController.navigate(Screen.Dashboard.createRoute(serverId))
+                },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.QrShare.route,
+            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
+            QrShareScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.QrScan.route) {
+            QrScanScreen(
+                onServerScanned = { profile ->
+                    // Navigate to AddServerScreen with pre-filled data handled via ViewModel
+                    navController.navigate(Screen.AddServer.createRoute()) {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.Bandwidth.route,
+            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
+            BandwidthScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
         }
     }
 }

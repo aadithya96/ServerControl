@@ -188,6 +188,9 @@ class AgentDataSource {
     suspend fun blockIp(serverProfile: ServerProfile, ip: String): Resource<GenericResponseDto> =
         safeCall { buildApi(serverProfile).blockIp(BlockIpRequest(ip)) }
 
+    suspend fun getBandwidth(serverProfile: ServerProfile): Resource<com.servercontrol.data.remote.dto.BandwidthResponseDto> =
+        safeCall { buildApi(serverProfile).getBandwidth() }
+
     private suspend fun <T> safeCall(call: suspend () -> T): Resource<T> = try {
         Resource.Success(call())
     } catch (e: Exception) {

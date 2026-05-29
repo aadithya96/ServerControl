@@ -1,5 +1,6 @@
 package com.servercontrol.data.remote.agent
 
+import com.servercontrol.data.remote.dto.BandwidthResponseDto
 import com.servercontrol.data.remote.dto.BlockIpRequest
 import com.servercontrol.data.remote.dto.ConnectionResponseDto
 import com.servercontrol.data.remote.dto.DiskResponseDto
@@ -112,4 +113,7 @@ interface AgentApi {
 
     @POST("api/v1/security/block-ip")
     suspend fun blockIp(@Body request: BlockIpRequest): GenericResponseDto
+
+    @GET("api/v1/bandwidth")
+    suspend fun getBandwidth(): BandwidthResponseDto
 }

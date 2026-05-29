@@ -215,20 +215,26 @@
 - [x] Local audit log: every app action (kill process, toggle firewall, restart service) logged with timestamp
 - [ ] Biometric lock: require fingerprint/PIN to open app
 
-## Phase 22: Widgets & Home Screen
-- [ ] 2×1 widget: server name + health dot (green/red)
-- [ ] 4×2 widget: CPU bar, RAM bar, disk bar for one server
-- [ ] Widget config: choose server, choose metrics to show
-- [ ] Glance API implementation
+## Phase 22: Widgets & Home Screen ✅
+- [x] 2×1 widget: server name + health dot (green/red) — ServerStatusWidget (Glance API)
+- [x] 4×2 widget: CPU bar, RAM bar, disk bar for one server — ServerMetricsWidget (Glance API)
+- [x] Widget config: choose server, choose metrics to show — WidgetConfigActivity (@AndroidEntryPoint)
+- [x] Glance API implementation — ServerStatusWidgetReceiver, ServerMetricsWidgetReceiver
+- [x] WidgetUpdaterWorker: periodic background update of widget state
+- [x] Widget XML provider files registered in AndroidManifest.xml
 
-## Phase 23: Multi-Server Dashboard & Groups
-- [ ] Server groups: tag servers (production/staging/home lab)
-- [ ] Overview screen: all servers side-by-side cards with key metrics
-- [ ] Compare mode: two servers' CPU/RAM side by side
-- [ ] Tablet two-pane layout
+## Phase 23: Multi-Server Dashboard & Groups ✅
+- [x] Server groups: tag servers — group field on ServerProfile/Entity + Room migration 4→5
+- [x] Overview screen: all servers side-by-side cards with key metrics — MultiServerOverviewScreen
+- [x] Compare mode: two servers' CPU/RAM side by side — ComparePanel in overview screen
+- [x] Tablet two-pane layout: adaptive layout based on screenWidthDp
+- [x] ServerGroupViewModel for group management
+- [x] Overview navigation entry in ServerListScreen TopAppBar
 
-## Phase 24: Integrations & Export
-- [ ] Webhook alerts: Slack/Discord/Telegram when thresholds hit
-- [ ] Server profile export (encrypted JSON) via share sheet
-- [ ] Import via QR code scan (encode server profile)
-- [ ] Bandwidth monitor: per-interface bytes in/out graph, top processes by bandwidth
+## Phase 24: Integrations & Export ✅
+- [x] Webhook alerts: Slack/Discord/Telegram — WebhookService + SettingsScreen section + ServerMonitorWorker integration
+- [x] Server profile export (JSON) via share sheet — ProfileExporter + ServerListScreen overflow menu
+- [x] Import via QR code scan — QrScanScreen (CameraX + ML Kit), QrShareScreen, QrCodeUtil (ZXing)
+- [x] Bandwidth monitor: per-interface bytes in/out sparklines, 2s polling — BandwidthScreen + BandwidthViewModel
+- [x] BandwidthInfo domain model + BandwidthDto + AgentApi getBandwidth endpoint
+- [x] FileProvider for JSON/image sharing

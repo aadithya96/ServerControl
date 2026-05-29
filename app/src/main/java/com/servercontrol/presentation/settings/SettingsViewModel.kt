@@ -6,11 +6,14 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.servercontrol.data.remote.WebhookService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -24,6 +27,10 @@ object SettingsKeys {
     val BG_MONITORING = booleanPreferencesKey("bg_monitoring")
     val BG_INTERVAL = intPreferencesKey("bg_interval_minutes")
     val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+    val WEBHOOK_TYPE = stringPreferencesKey("webhook_type")
+    val WEBHOOK_URL = stringPreferencesKey("webhook_url")
+    val TELEGRAM_BOT_TOKEN = stringPreferencesKey("telegram_bot_token")
+    val TELEGRAM_CHAT_ID = stringPreferencesKey("telegram_chat_id")
 }
 
 data class SettingsUiState(
@@ -33,12 +40,17 @@ data class SettingsUiState(
     val diskAlertThreshold: Int = 90,
     val backgroundMonitoringEnabled: Boolean = false,
     val backgroundMonitoringInterval: Int = 15,
-    val onboardingDone: Boolean = false
+    val onboardingDone: Boolean = false,
+    val webhookType: String = "none",
+    val webhookUrl: String = "",
+    val telegramBotToken: String = "",
+    val telegramChatId: String = ""
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val dataStore: DataStore<Preferences>
+    private val dataStore: DataStore<Preferences>,
+    private val webhookService: WebhookService
 ) : ViewModel() {
 
     val uiState: StateFlow<SettingsUiState> = dataStore.data.map { prefs ->
@@ -49,9 +61,29 @@ class SettingsViewModel @Inject constructor(
             diskAlertThreshold = prefs[SettingsKeys.DISK_ALERT] ?: 90,
             backgroundMonitoringEnabled = prefs[SettingsKeys.BG_MONITORING] ?: false,
             backgroundMonitoringInterval = prefs[SettingsKeys.BG_INTERVAL] ?: 15,
-            onboardingDone = prefs[SettingsKeys.ONBOARDING_DONE] ?: false
+            onboardingDone = prefs[SettingsKeys.ONBOARDING_DONE] ?: false,
+            webhookType = prefs[SettingsKeys.WEBHOOK_TYPE] ?: "none",
+            webhookUrl = prefs[SettingsKeys.WEBHOOK_URL] ?: "",
+            telegramBotToken = prefs[SettingsKeys.TELEGRAM_BOT_TOKEN] ?: "",
+            telegramChatId = prefs[SettingsKeys.TELEGRAM_CHAT_ID] ?: ""
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
+
+    val webhookType: StateFlow<String> = dataStore.data.map { prefs ->
+        prefs[SettingsKeys.WEBHOOK_TYPE] ?: "none"
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "none")
+
+    val webhookUrl: StateFlow<String> = dataStore.data.map { prefs ->
+        prefs[SettingsKeys.WEBHOOK_URL] ?: ""
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val telegramBotToken: StateFlow<String> = dataStore.data.map { prefs ->
+        prefs[SettingsKeys.TELEGRAM_BOT_TOKEN] ?: ""
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val telegramChatId: StateFlow<String> = dataStore.data.map { prefs ->
+        prefs[SettingsKeys.TELEGRAM_CHAT_ID] ?: ""
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
     val darkTheme: StateFlow<Boolean> = dataStore.data.map { prefs ->
         prefs[SettingsKeys.DARK_THEME] ?: true
@@ -64,6 +96,27 @@ class SettingsViewModel @Inject constructor(
     fun setBackgroundMonitoringEnabled(enabled: Boolean) = save { it[SettingsKeys.BG_MONITORING] = enabled }
     fun setBackgroundMonitoringInterval(minutes: Int) = save { it[SettingsKeys.BG_INTERVAL] = minutes }
     fun setOnboardingDone(done: Boolean) = save { it[SettingsKeys.ONBOARDING_DONE] = done }
+    fun setWebhookType(type: String) = save { it[SettingsKeys.WEBHOOK_TYPE] = type }
+    fun setWebhookUrl(url: String) = save { it[SettingsKeys.WEBHOOK_URL] = url }
+    fun setTelegramBotToken(token: String) = save { it[SettingsKeys.TELEGRAM_BOT_TOKEN] = token }
+    fun setTelegramChatId(chatId: String) = save { it[SettingsKeys.TELEGRAM_CHAT_ID] = chatId }
+
+    fun sendTestWebhook() {
+        viewModelScope.launch {
+            val prefs = dataStore.data.first()
+            val type = prefs[SettingsKeys.WEBHOOK_TYPE] ?: "none"
+            val url = prefs[SettingsKeys.WEBHOOK_URL] ?: ""
+            val token = prefs[SettingsKeys.TELEGRAM_BOT_TOKEN] ?: ""
+            val chatId = prefs[SettingsKeys.TELEGRAM_CHAT_ID] ?: ""
+            try {
+                when (type) {
+                    "slack" -> webhookService.sendSlackAlert(url, "Test alert from ServerControl", "Test Server")
+                    "discord" -> webhookService.sendDiscordAlert(url, "Test alert from ServerControl", "Test Server")
+                    "telegram" -> webhookService.sendTelegramAlert(token, chatId, "Test alert from ServerControl", "Test Server")
+                }
+            } catch (_: Exception) {}
+        }
+    }
 
     private fun save(block: (MutablePreferences) -> Unit) {
         viewModelScope.launch { dataStore.edit(block) }

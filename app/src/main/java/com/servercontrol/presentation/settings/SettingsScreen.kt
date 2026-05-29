@@ -22,6 +22,7 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     var showRefreshDialog by remember { mutableStateOf(false) }
+    var webhookTestResult by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -183,6 +184,68 @@ fun SettingsScreen(
                         steps = 9,
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+            }
+            item { HorizontalDivider() }
+
+            // --- Webhook Alerts ---
+            item { SettingsSectionHeader("Webhook Alerts") }
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Webhook Type", style = MaterialTheme.typography.bodyLarge)
+                    val webhookTypes = listOf("none" to "None", "slack" to "Slack", "discord" to "Discord", "telegram" to "Telegram")
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        webhookTypes.forEachIndexed { index, (key, label) ->
+                            SegmentedButton(
+                                selected = state.webhookType == key,
+                                onClick = { viewModel.setWebhookType(key) },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = webhookTypes.size)
+                            ) { Text(label, maxLines = 1) }
+                        }
+                    }
+
+                    if (state.webhookType == "slack" || state.webhookType == "discord") {
+                        OutlinedTextField(
+                            value = state.webhookUrl,
+                            onValueChange = { viewModel.setWebhookUrl(it) },
+                            label = { Text("Webhook URL") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+
+                    if (state.webhookType == "telegram") {
+                        OutlinedTextField(
+                            value = state.telegramBotToken,
+                            onValueChange = { viewModel.setTelegramBotToken(it) },
+                            label = { Text("Bot Token") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = state.telegramChatId,
+                            onValueChange = { viewModel.setTelegramChatId(it) },
+                            label = { Text("Chat ID") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+
+                    if (state.webhookType != "none") {
+                        Button(
+                            onClick = { webhookTestResult = "Sending test…"; viewModel.sendTestWebhook() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Test Webhook") }
+
+                        webhookTestResult?.let { msg ->
+                            Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                 }
             }
             item { HorizontalDivider() }

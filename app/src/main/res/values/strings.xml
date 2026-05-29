@@ -138,4 +138,33 @@
     <string name="metrics_min">Min</string>
     <string name="metrics_avg">Avg</string>
     <string name="metrics_max">Max</string>
+    <!-- Widgets -->
+    <string name="widget_status_description">Shows server name and health status</string>
+    <string name="widget_metrics_description">Shows CPU, RAM, and disk usage bars</string>
+    <string name="widget_config_title">Select Server for Widget</string>
+    <!-- Overview / Multi-server -->
+    <string name="overview_title">Overview</string>
+    <string name="compare_mode">Compare Mode</string>
+    <string name="select_two_servers">Select 2 servers to compare</string>
+    <string name="group_all">All</string>
+    <!-- QR -->
+    <string name="qr_share_title">Share as QR Code</string>
+    <string name="qr_scan_title">Scan QR Code</string>
+    <string name="qr_credentials_note">Credentials not included — you\'ll need to re-enter your token or SSH password when importing.</string>
+    <!-- Export / Import -->
+    <string name="export_profiles">Export Profiles</string>
+    <string name="import_profiles">Import Profiles</string>
+    <!-- Bandwidth -->
+    <string name="bandwidth_title">Bandwidth</string>
+    <string name="bandwidth_download">Download</string>
+    <string name="bandwidth_upload">Upload</string>
+    <!-- Webhook -->
+    <string name="webhook_alerts">Webhook Alerts</string>
+    <string name="webhook_type">Webhook Type</string>
+    <string name="webhook_url">Webhook URL</string>
+    <string name="webhook_test">Test Webhook</string>
+    <string name="webhook_none">None</string>
+    <string name="webhook_slack">Slack</string>
+    <string name="webhook_discord">Discord</string>
+    <string name="webhook_telegram">Telegram</string>
 </resources>
