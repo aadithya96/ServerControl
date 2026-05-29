@@ -21,4 +21,7 @@ interface ServerProfileDao {
 
     @Delete
     suspend fun deleteServer(server: ServerProfileEntity)
+
+    @Query("SELECT * FROM server_profiles ORDER BY name ASC")
+    suspend fun getAllServersOnce(): List<ServerProfileEntity>
 }

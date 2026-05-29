@@ -1,7 +1,9 @@
 package com.servercontrol.presentation.navigation
 
 sealed class Screen(val route: String) {
+    data object Onboarding : Screen("onboarding")
     data object ServerList : Screen("server_list")
+    data object Settings : Screen("settings")
     data object AddServer : Screen("add_server?serverId={serverId}") {
         fun createRoute(serverId: Long? = null) =
             if (serverId != null) "add_server?serverId=$serverId" else "add_server"
@@ -21,5 +23,4 @@ sealed class Screen(val route: String) {
     data object Connections : Screen("connections/{serverId}") {
         fun createRoute(serverId: Long) = "connections/$serverId"
     }
-    data object Settings : Screen("settings")
 }

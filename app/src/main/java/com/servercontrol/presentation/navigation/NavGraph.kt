@@ -1,6 +1,9 @@
 package com.servercontrol.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -10,16 +13,38 @@ import com.servercontrol.presentation.connections.ConnectionsScreen
 import com.servercontrol.presentation.dashboard.DashboardScreen
 import com.servercontrol.presentation.disk.DiskScreen
 import com.servercontrol.presentation.firewall.FirewallScreen
+import com.servercontrol.presentation.onboarding.OnboardingScreen
 import com.servercontrol.presentation.processes.ProcessListScreen
 import com.servercontrol.presentation.servers.AddServerScreen
 import com.servercontrol.presentation.servers.ServerListScreen
 import com.servercontrol.presentation.settings.SettingsScreen
+import com.servercontrol.presentation.settings.SettingsViewModel
 
 @Composable
-fun NavGraph(startDestination: String = Screen.ServerList.route) {
+fun NavGraph() {
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
+    val onboardingDone by settingsViewModel.uiState.collectAsState()
+
+    val startDestination = if (onboardingDone.onboardingDone) {
+        Screen.ServerList.route
+    } else {
+        Screen.Onboarding.route
+    }
+
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
+
+        composable(Screen.Onboarding.route) {
+            OnboardingScreen(
+                onComplete = {
+                    settingsViewModel.setOnboardingDone(true)
+                    navController.navigate(Screen.ServerList.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                }
+            )
+        }
 
         composable(Screen.ServerList.route) {
             ServerListScreen(

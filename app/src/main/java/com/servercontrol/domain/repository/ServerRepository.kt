@@ -10,4 +10,5 @@ interface ServerRepository {
     suspend fun updateServer(server: ServerProfile)
     suspend fun deleteServer(server: ServerProfile)
     suspend fun testConnection(server: ServerProfile): Result<Long>
+    suspend fun getAllServers(): List<ServerProfile>
 }

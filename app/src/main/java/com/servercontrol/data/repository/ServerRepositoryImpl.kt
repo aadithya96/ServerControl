@@ -31,6 +31,9 @@ class ServerRepositoryImpl @Inject constructor(
     override suspend fun deleteServer(server: ServerProfile) =
         serverProfileDao.deleteServer(server.toEntity())
 
+    override suspend fun getAllServers(): List<ServerProfile> =
+        serverProfileDao.getAllServersOnce().map { it.toDomain() }
+
     override suspend fun testConnection(server: ServerProfile): Result<Long> {
         val start = System.currentTimeMillis()
         return try {

@@ -1,9 +1,9 @@
 package com.servercontrol.presentation.firewall
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.servercontrol.domain.model.FirewallChain
-import com.servercontrol.domain.model.FirewallRule
+import com.servercontrol.domain.model.FirewallData
 import com.servercontrol.domain.usecase.GetFirewallRulesUseCase
 import com.servercontrol.domain.usecase.ToggleFirewallRuleUseCase
 import com.servercontrol.util.Resource
@@ -14,64 +14,61 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class FirewallUiState(
-    val backend: String = "",
-    val chains: List<FirewallChain> = emptyList(),
-    val rules: List<FirewallRule> = emptyList(),
-    val isLoading: Boolean = false,
-    val error: String? = null,
-    val message: String? = null
-)
-
 @HiltViewModel
 class FirewallViewModel @Inject constructor(
     private val getFirewallRulesUseCase: GetFirewallRulesUseCase,
-    private val toggleFirewallRuleUseCase: ToggleFirewallRuleUseCase
+    private val toggleFirewallRuleUseCase: ToggleFirewallRuleUseCase,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(FirewallUiState())
-    val uiState: StateFlow<FirewallUiState> = _uiState.asStateFlow()
+    val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
 
-    private var serverId: Long = -1L
+    private val _firewallData = MutableStateFlow<Resource<FirewallData>>(Resource.Loading)
+    val firewallData: StateFlow<Resource<FirewallData>> = _firewallData.asStateFlow()
 
-    fun init(serverId: Long) {
-        this.serverId = serverId
-        loadRules()
+    val toggleResult: MutableStateFlow<Resource<String>?> = MutableStateFlow(null)
+
+    val expandedChains: MutableStateFlow<Set<String>> = MutableStateFlow(emptySet())
+
+    init {
+        refresh()
     }
 
-    fun refresh() { loadRules() }
+    fun toggleChainExpanded(chainName: String) {
+        val current = expandedChains.value
+        expandedChains.value = if (chainName in current) {
+            current - chainName
+        } else {
+            current + chainName
+        }
+    }
 
-    fun toggleRule(ruleId: String, enable: Boolean) {
+    fun toggleRule(ruleId: String, enabled: Boolean) {
         viewModelScope.launch {
-            when (val result = toggleFirewallRuleUseCase(serverId, ruleId, enable)) {
-                is Resource.Success -> {
-                    _uiState.value = _uiState.value.copy(message = "Rule ${if (enable) "enabled" else "disabled"}")
-                    loadRules()
-                }
-                is Resource.Error -> _uiState.value = _uiState.value.copy(message = "Error: ${result.message}")
-                is Resource.Loading -> Unit
+            val result = toggleFirewallRuleUseCase(serverId, ruleId, enabled)
+            toggleResult.value = when (result) {
+                is Resource.Success -> Resource.Success("Rule ${if (enabled) "enabled" else "disabled"} successfully")
+                is Resource.Error -> Resource.Error(result.message)
+                is Resource.Loading -> null
+            }
+            if (result is Resource.Success) {
+                refresh()
             }
         }
     }
 
-    private fun loadRules() {
+    fun clearToggleResult() {
+        toggleResult.value = null
+    }
+
+    fun refresh() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            when (val result = getFirewallRulesUseCase(serverId)) {
-                is Resource.Success -> {
-                    val data = result.data
-                    _uiState.value = _uiState.value.copy(
-                        backend = data.backend,
-                        chains = data.chains,
-                        rules = data.chains.flatMap { it.rules },
-                        isLoading = false,
-                        error = null
-                    )
-                }
-                is Resource.Error -> _uiState.value = _uiState.value.copy(
-                    isLoading = false, error = result.message
-                )
-                is Resource.Loading -> Unit
+            _firewallData.value = Resource.Loading
+            _firewallData.value = getFirewallRulesUseCase(serverId)
+            // Expand all chains by default on first load
+            val data = _firewallData.value
+            if (data is Resource.Success && expandedChains.value.isEmpty()) {
+                expandedChains.value = data.data.chains.map { it.name }.toSet()
             }
         }
     }
