@@ -191,5 +191,29 @@ fun NavGraph() {
                 onAgentConfigured = { navController.popBackStack() }
             )
         }
+
+        composable(
+            route = Screen.Docker.route,
+            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
+            DockerScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.QuickCommands.route,
+            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
+            QuickCommandsScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.Security.route,
+            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
+            SecurityScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
+        }
     }
 }
