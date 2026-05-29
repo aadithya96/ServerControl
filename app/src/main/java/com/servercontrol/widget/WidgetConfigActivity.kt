@@ -73,7 +73,7 @@ class WidgetConfigActivity : ComponentActivity() {
                             } catch (e: Exception) { null }
 
                             glanceId?.let { id ->
-                                androidx.glance.appwidget.updateAppWidgetState(
+                                androidx.glance.appwidget.state.updateAppWidgetState(
                                     context = this@WidgetConfigActivity,
                                     definition = androidx.glance.state.PreferencesGlanceStateDefinition,
                                     id = id

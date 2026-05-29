@@ -62,7 +62,7 @@ class WidgetUpdaterWorker @AssistedInject constructor(
 
             val diskPercent = if (server.authType == AuthType.AGENT_TOKEN) {
                 when (val r = agentDataSource.getDiskInfo(server)) {
-                    is Resource.Success -> r.data.mounts.maxOfOrNull { it.usedPercent }?.toFloat() ?: 0f
+                    is Resource.Success -> r.data.mounts.maxOfOrNull { it.usagePercent }?.toFloat() ?: 0f
                     else -> 0f
                 }
             } else {

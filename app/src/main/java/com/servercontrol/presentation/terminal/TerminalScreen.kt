@@ -443,7 +443,7 @@ private fun ExtendedKeyRow(
     ) {
         // Ctrl+C
         OutlinedButton(
-            onClick = { onControlChar('') },
+            onClick = { onControlChar('') },
             modifier = Modifier.height(32.dp),
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5555)),
@@ -456,7 +456,7 @@ private fun ExtendedKeyRow(
 
         // Ctrl+D
         OutlinedButton(
-            onClick = { onControlChar('') },
+            onClick = { onControlChar('') },
             modifier = Modifier.height(32.dp),
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFFC107)),
