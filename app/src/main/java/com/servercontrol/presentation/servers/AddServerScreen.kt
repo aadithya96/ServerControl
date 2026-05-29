@@ -30,14 +30,44 @@ import com.servercontrol.util.Resource
 @Composable
 fun AddServerScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToInstaller: (Long) -> Unit = {},
     viewModel: AddServerViewModel = hiltViewModel()
 ) {
     val saveState by viewModel.saveState.collectAsState()
     val testState by viewModel.testConnectionState.collectAsState()
     val isFormValid by viewModel.isFormValid.collectAsState()
+    val pendingInstallServerId by viewModel.pendingInstallServerId.collectAsState()
 
-    LaunchedEffect(saveState) {
-        if (saveState is Resource.Success) onNavigateBack()
+    LaunchedEffect(saveState, pendingInstallServerId) {
+        if (saveState is Resource.Success && pendingInstallServerId == null) onNavigateBack()
+    }
+
+    pendingInstallServerId?.let { newServerId ->
+        AlertDialog(
+            onDismissRequest = {
+                viewModel.clearInstallPrompt()
+                onNavigateBack()
+            },
+            title = { Text("Install Daemon?") },
+            text = {
+                Text(
+                    "Would you like to install the ServerControl monitoring daemon on this server now? " +
+                    "The app will connect via SSH and set it up automatically — no copy-pasting required."
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.clearInstallPrompt()
+                    onNavigateToInstaller(newServerId)
+                }) { Text("Install Now") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    viewModel.clearInstallPrompt()
+                    onNavigateBack()
+                }) { Text("Later") }
+            }
+        )
     }
 
     val isSaving = saveState is Resource.Loading

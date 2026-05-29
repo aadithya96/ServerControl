@@ -101,7 +101,14 @@ fun NavGraph() {
                 }
             )
         ) {
-            AddServerScreen(onNavigateBack = { navController.popBackStack() })
+            AddServerScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToInstaller = { serverId ->
+                    navController.navigate(Screen.AgentInstaller.createRoute(serverId)) {
+                        popUpTo(Screen.AddServer.route) { inclusive = true }
+                    }
+                }
+            )
         }
 
         composable(
