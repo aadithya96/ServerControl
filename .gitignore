@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+**/build/
+local.properties
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# IntelliJ / Android Studio
+*.iml
+.idea/
+*.hprof
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Kotlin
+*.class
+
+# macOS
+.DS_Store
+
+# Agent build artifacts
+agent/servercontrol-agent
