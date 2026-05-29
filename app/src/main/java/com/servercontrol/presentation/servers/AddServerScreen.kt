@@ -1,19 +1,30 @@
 package com.servercontrol.presentation.servers
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.servercontrol.domain.model.AuthType
+import com.servercontrol.util.Resource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,16 +32,21 @@ fun AddServerScreen(
     onNavigateBack: () -> Unit,
     viewModel: AddServerViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val saveState by viewModel.saveState.collectAsState()
+    val testState by viewModel.testConnectionState.collectAsState()
+    val isFormValid by viewModel.isFormValid.collectAsState()
 
-    LaunchedEffect(state.saveSuccess) {
-        if (state.saveSuccess) onNavigateBack()
+    LaunchedEffect(saveState) {
+        if (saveState is Resource.Success) onNavigateBack()
     }
+
+    val isSaving = saveState is Resource.Loading
+    val isTesting = testState is Resource.Loading
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Server") },
+                title = { Text(if (viewModel.editServerId != null) "Edit Server" else "Add Server") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -47,155 +63,232 @@ fun AddServerScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Display Name
             OutlinedTextField(
-                value = state.name,
-                onValueChange = viewModel::onNameChange,
+                value = viewModel.displayName,
+                onValueChange = { viewModel.displayName = it },
                 label = { Text("Display Name") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
 
+            // Host / IP
             OutlinedTextField(
-                value = state.host,
-                onValueChange = viewModel::onHostChange,
-                label = { Text("Hostname / IP") },
+                value = viewModel.host,
+                onValueChange = { viewModel.host = it },
+                label = { Text("Host / IP") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
             )
 
-            Row(
+            // Agent Port
+            OutlinedTextField(
+                value = viewModel.agentPort,
+                onValueChange = { viewModel.agentPort = it },
+                label = { Text("Agent Port") },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = state.agentPort,
-                    onValueChange = viewModel::onAgentPortChange,
-                    label = { Text("Agent Port") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-                OutlinedTextField(
-                    value = state.sshPort,
-                    onValueChange = viewModel::onSshPortChange,
-                    label = { Text("SSH Port") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-            }
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
 
+            // Auth Type Segmented Buttons
             Text("Authentication", style = MaterialTheme.typography.titleSmall)
 
-            AuthType.entries.forEach { type ->
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = state.authType == type,
-                        onClick = { viewModel.onAuthTypeChange(type) }
-                    )
-                    Text(
-                        text = when (type) {
-                            AuthType.AGENT_TOKEN -> "Agent Token"
-                            AuthType.SSH_PASSWORD -> "SSH Password"
-                            AuthType.SSH_KEY -> "SSH Private Key"
-                        }
-                    )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                val options = listOf(
+                    AuthType.AGENT_TOKEN to "Agent Token",
+                    AuthType.SSH_PASSWORD to "SSH Password",
+                    AuthType.SSH_KEY to "SSH Key"
+                )
+                options.forEachIndexed { index, (type, label) ->
+                    SegmentedButton(
+                        selected = viewModel.authType == type,
+                        onClick = { viewModel.authType = type },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
+                    ) {
+                        Text(label, maxLines = 1)
+                    }
                 }
             }
 
-            when (state.authType) {
-                AuthType.AGENT_TOKEN -> {
+            // Agent Token fields
+            AnimatedVisibility(visible = viewModel.authType == AuthType.AGENT_TOKEN) {
+                var tokenVisible by remember { mutableStateOf(false) }
+                OutlinedTextField(
+                    value = viewModel.agentToken,
+                    onValueChange = { viewModel.agentToken = it },
+                    label = { Text("Agent Token") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    visualTransformation = if (tokenVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { tokenVisible = !tokenVisible }) {
+                            Icon(
+                                if (tokenVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (tokenVisible) "Hide token" else "Show token"
+                            )
+                        }
+                    }
+                )
+            }
+
+            // SSH Password fields
+            AnimatedVisibility(visible = viewModel.authType == AuthType.SSH_PASSWORD) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        value = state.agentToken,
-                        onValueChange = viewModel::onAgentTokenChange,
-                        label = { Text("Agent Token") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation()
-                    )
-                }
-                AuthType.SSH_PASSWORD -> {
-                    OutlinedTextField(
-                        value = state.sshUsername,
-                        onValueChange = viewModel::onSshUsernameChange,
+                        value = viewModel.sshUser,
+                        onValueChange = { viewModel.sshUser = it },
                         label = { Text("SSH Username") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
+                    var passVisible by remember { mutableStateOf(false) }
                     OutlinedTextField(
-                        value = state.sshPassword,
-                        onValueChange = viewModel::onSshPasswordChange,
+                        value = viewModel.sshPassword,
+                        onValueChange = { viewModel.sshPassword = it },
                         label = { Text("SSH Password") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        visualTransformation = PasswordVisualTransformation()
+                        visualTransformation = if (passVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { passVisible = !passVisible }) {
+                                Icon(
+                                    if (passVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (passVisible) "Hide password" else "Show password"
+                                )
+                            }
+                        }
+                    )
+                    OutlinedTextField(
+                        value = viewModel.sshPort,
+                        onValueChange = { viewModel.sshPort = it },
+                        label = { Text("SSH Port") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
-                AuthType.SSH_KEY -> {
+            }
+
+            // SSH Key fields
+            AnimatedVisibility(visible = viewModel.authType == AuthType.SSH_KEY) {
+                val context = LocalContext.current
+                val filePickerLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocument()
+                ) { uri: Uri? ->
+                    uri?.let {
+                        // Read key content from URI
+                        try {
+                            val stream = context.contentResolver.openInputStream(uri)
+                            val content = stream?.bufferedReader()?.readText() ?: ""
+                            stream?.close()
+                            viewModel.sshKeyPath = content
+                        } catch (e: Exception) {
+                            viewModel.sshKeyPath = uri.toString()
+                        }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        value = state.sshUsername,
-                        onValueChange = viewModel::onSshUsernameChange,
+                        value = viewModel.sshUser,
+                        onValueChange = { viewModel.sshUser = it },
                         label = { Text("SSH Username") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
                     OutlinedTextField(
-                        value = state.sshPrivateKey,
-                        onValueChange = viewModel::onSshPrivateKeyChange,
+                        value = if (viewModel.sshKeyPath.length > 80)
+                            viewModel.sshKeyPath.take(40) + "..." + viewModel.sshKeyPath.takeLast(20)
+                        else viewModel.sshKeyPath,
+                        onValueChange = {},
                         label = { Text("Private Key (PEM)") },
-                        modifier = Modifier.fillMaxWidth().height(120.dp),
-                        maxLines = 6
+                        modifier = Modifier.fillMaxWidth(),
+                        readOnly = true,
+                        maxLines = 3,
+                        trailingIcon = {
+                            IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
+                                Icon(Icons.Default.FolderOpen, contentDescription = "Browse")
+                            }
+                        }
+                    )
+                    OutlinedTextField(
+                        value = viewModel.sshPort,
+                        onValueChange = { viewModel.sshPort = it },
+                        label = { Text("SSH Port") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
             }
 
-            state.error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error)
-            }
-
-            state.testResult?.let { result ->
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (result.startsWith("Connected"))
-                            MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.errorContainer
+            // Test connection result
+            when (val ts = testState) {
+                is Resource.Loading -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                        Text("Testing connection...", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                is Resource.Success -> {
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text("Connected in ${ts.data}ms", color = MaterialTheme.colorScheme.primary) }
                     )
-                ) {
+                }
+                is Resource.Error -> {
                     Text(
-                        text = result,
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "Error: ${ts.message}",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
                     )
+                }
+                null -> Unit
+            }
+
+            // Save error
+            if (saveState is Resource.Error) {
+                Text(
+                    text = (saveState as Resource.Error).message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Test Connection Button
+            ElevatedButton(
+                onClick = viewModel::testConnection,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isTesting && !isSaving
+            ) {
+                if (isTesting) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Testing...")
+                } else {
+                    Text("Test Connection")
                 }
             }
 
-            Row(
+            // Save Button
+            Button(
+                onClick = viewModel::saveServer,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                enabled = isFormValid && !isSaving && !isTesting
             ) {
-                OutlinedButton(
-                    onClick = viewModel::testConnection,
-                    modifier = Modifier.weight(1f),
-                    enabled = !state.isTesting && !state.isSaving
-                ) {
-                    if (state.isTesting) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                    } else {
-                        Text("Test Connection")
-                    }
-                }
-
-                Button(
-                    onClick = viewModel::saveServer,
-                    modifier = Modifier.weight(1f),
-                    enabled = !state.isSaving && !state.isTesting
-                ) {
-                    if (state.isSaving) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                    } else {
-                        Text("Save")
-                    }
+                if (isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Saving...")
+                } else {
+                    Text("Save")
                 }
             }
         }

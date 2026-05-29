@@ -1,5 +1,6 @@
 package com.servercontrol.presentation.processes
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.servercontrol.domain.model.Process
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -31,42 +33,71 @@ data class ProcessUiState(
 @HiltViewModel
 class ProcessListViewModel @Inject constructor(
     private val getProcessesUseCase: GetProcessesUseCase,
-    private val killProcessUseCase: KillProcessUseCase
+    private val killProcessUseCase: KillProcessUseCase,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _processes = MutableStateFlow<List<Process>>(emptyList())
-    private val _isLoading = MutableStateFlow(false)
-    private val _error = MutableStateFlow<String?>(null)
-    private val _sortOrder = MutableStateFlow(ProcessSortOrder.CPU)
-    private val _searchQuery = MutableStateFlow("")
+    val serverId: Long = savedStateHandle["serverId"] ?: -1L
+
+    private val _allProcesses = MutableStateFlow<Resource<List<Process>>>(Resource.Loading)
+    val sortBy = MutableStateFlow(ProcessSortOrder.CPU)
+    val searchQuery = MutableStateFlow("")
     private val _killResult = MutableStateFlow<String?>(null)
     private val _autoRefresh = MutableStateFlow(true)
 
     val uiState: StateFlow<ProcessUiState> = combine(
-        _processes, _isLoading, _error, _sortOrder, _searchQuery, _killResult, _autoRefresh
-    ) { values ->
-        @Suppress("UNCHECKED_CAST")
-        ProcessUiState(
-            processes = values[0] as List<Process>,
-            isLoading = values[1] as Boolean,
-            error = values[2] as String?,
-            sortOrder = values[3] as ProcessSortOrder,
-            searchQuery = values[4] as String,
-            killResult = values[5] as String?,
-            autoRefresh = values[6] as Boolean
-        )
+        _allProcesses, sortBy, searchQuery, _killResult, _autoRefresh
+    ) { allRes, sort, query, killResult, autoRefresh ->
+        val filteredSorted = when (allRes) {
+            is Resource.Success -> {
+                val filtered = allRes.data.filter {
+                    query.isEmpty() ||
+                        it.name.contains(query, ignoreCase = true) ||
+                        it.command.contains(query, ignoreCase = true)
+                }
+                val sorted = when (sort) {
+                    ProcessSortOrder.CPU -> filtered.sortedByDescending { it.cpuPercent }
+                    ProcessSortOrder.MEMORY -> filtered.sortedByDescending { it.memPercent }
+                    ProcessSortOrder.PID -> filtered.sortedBy { it.pid }
+                    ProcessSortOrder.NAME -> filtered.sortedBy { it.name }
+                }
+                ProcessUiState(
+                    processes = sorted,
+                    isLoading = false,
+                    sortOrder = sort,
+                    searchQuery = query,
+                    killResult = killResult,
+                    autoRefresh = autoRefresh
+                )
+            }
+            is Resource.Error -> ProcessUiState(
+                error = allRes.message,
+                isLoading = false,
+                sortOrder = sort,
+                searchQuery = query,
+                killResult = killResult,
+                autoRefresh = autoRefresh
+            )
+            is Resource.Loading -> ProcessUiState(
+                isLoading = true,
+                sortOrder = sort,
+                searchQuery = query,
+                killResult = killResult,
+                autoRefresh = autoRefresh
+            )
+        }
+        filteredSorted
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ProcessUiState())
 
     private var refreshJob: Job? = null
-    private var serverId: Long = -1L
 
-    fun init(serverId: Long) {
-        this.serverId = serverId
+    init {
         startAutoRefresh()
     }
 
-    fun setSortOrder(order: ProcessSortOrder) { _sortOrder.value = order }
-    fun setSearchQuery(query: String) { _searchQuery.value = query }
+    fun setSortBy(sort: ProcessSortOrder) { sortBy.value = sort }
+    fun setSearchQuery(q: String) { searchQuery.value = q }
+    fun setSortOrder(order: ProcessSortOrder) { sortBy.value = order }
     fun setAutoRefresh(enabled: Boolean) {
         _autoRefresh.value = enabled
         if (enabled) startAutoRefresh() else refreshJob?.cancel()
@@ -91,6 +122,13 @@ class ProcessListViewModel @Inject constructor(
         }
     }
 
+    fun clearKillResult() { _killResult.value = null }
+
+    // Legacy init for backward compat
+    fun init(id: Long) {
+        restartPolling()
+    }
+
     private fun startAutoRefresh() {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
@@ -101,18 +139,15 @@ class ProcessListViewModel @Inject constructor(
         }
     }
 
+    private fun restartPolling() {
+        if (_autoRefresh.value) startAutoRefresh()
+    }
+
     private suspend fun fetchProcesses() {
-        _isLoading.value = _processes.value.isEmpty()
-        when (val result = getProcessesUseCase(serverId, _sortOrder.value)) {
-            is Resource.Success -> {
-                _processes.value = result.data
-                _isLoading.value = false
-                _error.value = null
-            }
-            is Resource.Error -> {
-                _isLoading.value = false
-                _error.value = result.message
-            }
+        val effectiveId = if (serverId != -1L) serverId else return
+        when (val result = getProcessesUseCase(effectiveId, sortBy.value)) {
+            is Resource.Success -> _allProcesses.value = result
+            is Resource.Error -> _allProcesses.value = result
             is Resource.Loading -> Unit
         }
     }

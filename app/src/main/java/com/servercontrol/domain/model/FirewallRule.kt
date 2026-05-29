@@ -12,3 +12,14 @@ data class FirewallRule(
     val packetsCount: Long = 0,
     val bytesCount: Long = 0
 )
+
+data class FirewallData(
+    val backend: String,
+    val chains: List<FirewallChain>
+)
+
+data class FirewallChain(
+    val name: String,
+    val policy: String,
+    val rules: List<FirewallRule>
+)

@@ -2,6 +2,7 @@ package com.servercontrol.presentation.firewall
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.servercontrol.domain.model.FirewallChain
 import com.servercontrol.domain.model.FirewallRule
 import com.servercontrol.domain.usecase.GetFirewallRulesUseCase
 import com.servercontrol.domain.usecase.ToggleFirewallRuleUseCase
@@ -14,6 +15,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class FirewallUiState(
+    val backend: String = "",
+    val chains: List<FirewallChain> = emptyList(),
     val rules: List<FirewallRule> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -55,9 +58,16 @@ class FirewallViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             when (val result = getFirewallRulesUseCase(serverId)) {
-                is Resource.Success -> _uiState.value = _uiState.value.copy(
-                    rules = result.data, isLoading = false, error = null
-                )
+                is Resource.Success -> {
+                    val data = result.data
+                    _uiState.value = _uiState.value.copy(
+                        backend = data.backend,
+                        chains = data.chains,
+                        rules = data.chains.flatMap { it.rules },
+                        isLoading = false,
+                        error = null
+                    )
+                }
                 is Resource.Error -> _uiState.value = _uiState.value.copy(
                     isLoading = false, error = result.message
                 )

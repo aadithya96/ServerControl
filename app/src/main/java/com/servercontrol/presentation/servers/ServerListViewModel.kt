@@ -6,6 +6,7 @@ import com.servercontrol.domain.model.ServerProfile
 import com.servercontrol.domain.repository.ServerRepository
 import com.servercontrol.domain.usecase.GetServersUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -25,9 +26,22 @@ class ServerListViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    val selectedServerId: MutableStateFlow<Long?> = MutableStateFlow(null)
+
+    fun deleteServer(id: Long) {
+        viewModelScope.launch {
+            val server = serverRepository.getServerById(id) ?: return@launch
+            serverRepository.deleteServer(server)
+        }
+    }
+
     fun deleteServer(server: ServerProfile) {
         viewModelScope.launch {
             serverRepository.deleteServer(server)
         }
+    }
+
+    fun selectServer(id: Long) {
+        selectedServerId.value = id
     }
 }

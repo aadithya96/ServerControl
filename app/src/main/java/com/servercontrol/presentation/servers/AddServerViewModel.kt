@@ -1,119 +1,128 @@
 package com.servercontrol.presentation.servers
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.servercontrol.domain.model.AuthType
 import com.servercontrol.domain.model.ServerProfile
 import com.servercontrol.domain.repository.ServerRepository
+import com.servercontrol.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class AddServerUiState(
-    val name: String = "",
-    val host: String = "",
-    val agentPort: String = "9876",
-    val sshPort: String = "22",
-    val authType: AuthType = AuthType.AGENT_TOKEN,
-    val agentToken: String = "",
-    val sshUsername: String = "",
-    val sshPassword: String = "",
-    val sshPrivateKey: String = "",
-    val isTesting: Boolean = false,
-    val testResult: String? = null,
-    val isSaving: Boolean = false,
-    val saveSuccess: Boolean = false,
-    val error: String? = null
-)
-
 @HiltViewModel
 class AddServerViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val serverRepository: ServerRepository
+    private val serverRepository: ServerRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val serverId: Long = savedStateHandle["serverId"] ?: -1L
+    val editServerId: Long? = savedStateHandle.get<Long>("serverId")?.takeIf { it != -1L }
 
-    private val _uiState = MutableStateFlow(AddServerUiState())
-    val uiState: StateFlow<AddServerUiState> = _uiState.asStateFlow()
+    var displayName by mutableStateOf("")
+    var host by mutableStateOf("")
+    var agentPort by mutableStateOf("9876")
+    var authType by mutableStateOf(AuthType.AGENT_TOKEN)
+    var agentToken by mutableStateOf("")
+    var sshUser by mutableStateOf("")
+    var sshPassword by mutableStateOf("")
+    var sshKeyPath by mutableStateOf("")
+    var sshPort by mutableStateOf("22")
+
+    val testConnectionState: MutableStateFlow<Resource<Long>?> = MutableStateFlow(null)
+    val saveState: MutableStateFlow<Resource<Unit>?> = MutableStateFlow(null)
+
+    val isFormValid: StateFlow<Boolean> = combine(
+        snapshotFlow { displayName },
+        snapshotFlow { host },
+        snapshotFlow { authType },
+        snapshotFlow { agentToken },
+        snapshotFlow { sshUser }
+    ) { name, h, auth, token, user ->
+        if (name.isBlank() || h.isBlank()) return@combine false
+        when (auth) {
+            AuthType.AGENT_TOKEN -> token.isNotBlank()
+            AuthType.SSH_PASSWORD -> user.isNotBlank()
+            AuthType.SSH_KEY -> user.isNotBlank()
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     init {
-        if (serverId != -1L) loadServer(serverId)
+        editServerId?.let { loadServer(it) }
     }
 
-    private fun loadServer(id: Long) {
+    fun loadServer(id: Long) {
         viewModelScope.launch {
             val server = serverRepository.getServerById(id) ?: return@launch
-            _uiState.value = AddServerUiState(
-                name = server.name,
-                host = server.host,
-                agentPort = server.agentPort.toString(),
-                sshPort = server.sshPort.toString(),
-                authType = server.authType,
-                agentToken = server.agentToken ?: "",
-                sshUsername = server.sshUsername ?: "",
-                sshPassword = server.sshPassword ?: "",
-                sshPrivateKey = server.sshPrivateKey ?: ""
-            )
+            displayName = server.name
+            host = server.host
+            agentPort = server.agentPort.toString()
+            sshPort = server.sshPort.toString()
+            authType = server.authType
+            agentToken = server.agentToken ?: ""
+            sshUser = server.sshUsername ?: ""
+            sshPassword = server.sshPassword ?: ""
+            sshKeyPath = server.sshPrivateKey ?: ""
         }
     }
 
-    fun onNameChange(value: String) { _uiState.value = _uiState.value.copy(name = value) }
-    fun onHostChange(value: String) { _uiState.value = _uiState.value.copy(host = value) }
-    fun onAgentPortChange(value: String) { _uiState.value = _uiState.value.copy(agentPort = value) }
-    fun onSshPortChange(value: String) { _uiState.value = _uiState.value.copy(sshPort = value) }
-    fun onAuthTypeChange(value: AuthType) { _uiState.value = _uiState.value.copy(authType = value) }
-    fun onAgentTokenChange(value: String) { _uiState.value = _uiState.value.copy(agentToken = value) }
-    fun onSshUsernameChange(value: String) { _uiState.value = _uiState.value.copy(sshUsername = value) }
-    fun onSshPasswordChange(value: String) { _uiState.value = _uiState.value.copy(sshPassword = value) }
-    fun onSshPrivateKeyChange(value: String) { _uiState.value = _uiState.value.copy(sshPrivateKey = value) }
-
     fun testConnection() {
-        val state = _uiState.value
-        val server = buildServerProfile(state) ?: return
-        _uiState.value = state.copy(isTesting = true, testResult = null)
+        val profile = buildProfile() ?: run {
+            testConnectionState.value = Resource.Error("Please fill all required fields")
+            return
+        }
+        testConnectionState.value = Resource.Loading
         viewModelScope.launch {
-            val result = serverRepository.testConnection(server)
-            _uiState.value = _uiState.value.copy(
-                isTesting = false,
-                testResult = result.fold(
-                    onSuccess = { latency -> "Connected in ${latency}ms" },
-                    onFailure = { e -> "Failed: ${e.message}" }
-                )
+            val result = serverRepository.testConnection(profile)
+            testConnectionState.value = result.fold(
+                onSuccess = { Resource.Success(it) },
+                onFailure = { Resource.Error(it.message ?: "Connection failed") }
             )
         }
     }
 
     fun saveServer() {
-        val state = _uiState.value
-        val server = buildServerProfile(state) ?: run {
-            _uiState.value = state.copy(error = "Please fill all required fields")
+        val profile = buildProfile() ?: run {
+            saveState.value = Resource.Error("Please fill all required fields")
             return
         }
-        _uiState.value = state.copy(isSaving = true)
+        saveState.value = Resource.Loading
         viewModelScope.launch {
-            if (serverId != -1L) serverRepository.updateServer(server.copy(id = serverId))
-            else serverRepository.insertServer(server)
-            _uiState.value = _uiState.value.copy(isSaving = false, saveSuccess = true)
+            try {
+                if (editServerId != null) {
+                    serverRepository.updateServer(profile.copy(id = editServerId))
+                } else {
+                    serverRepository.insertServer(profile)
+                }
+                saveState.value = Resource.Success(Unit)
+            } catch (e: Exception) {
+                saveState.value = Resource.Error(e.message ?: "Save failed")
+            }
         }
     }
 
-    private fun buildServerProfile(state: AddServerUiState): ServerProfile? {
-        if (state.name.isBlank() || state.host.isBlank()) return null
+    private fun buildProfile(): ServerProfile? {
+        if (displayName.isBlank() || host.isBlank()) return null
         return ServerProfile(
-            name = state.name,
-            host = state.host,
-            agentPort = state.agentPort.toIntOrNull() ?: 9876,
-            sshPort = state.sshPort.toIntOrNull() ?: 22,
-            authType = state.authType,
-            agentToken = state.agentToken.takeIf { it.isNotBlank() },
-            sshUsername = state.sshUsername.takeIf { it.isNotBlank() },
-            sshPassword = state.sshPassword.takeIf { it.isNotBlank() },
-            sshPrivateKey = state.sshPrivateKey.takeIf { it.isNotBlank() }
+            id = editServerId ?: 0L,
+            name = displayName.trim(),
+            host = host.trim(),
+            agentPort = agentPort.toIntOrNull() ?: 9876,
+            sshPort = sshPort.toIntOrNull() ?: 22,
+            authType = authType,
+            agentToken = agentToken.takeIf { it.isNotBlank() },
+            sshUsername = sshUser.takeIf { it.isNotBlank() },
+            sshPassword = sshPassword.takeIf { it.isNotBlank() },
+            sshPrivateKey = sshKeyPath.takeIf { it.isNotBlank() }
         )
     }
 }
