@@ -1,7 +1,9 @@
 package com.servercontrol.di
 
+import com.servercontrol.data.repository.MetricsRepositoryImpl
 import com.servercontrol.data.repository.ServerRepositoryImpl
 import com.servercontrol.data.repository.StatsRepositoryImpl
+import com.servercontrol.domain.repository.MetricsRepository
 import com.servercontrol.domain.repository.ServerRepository
 import com.servercontrol.domain.repository.StatsRepository
 import dagger.Binds
@@ -21,4 +23,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindStatsRepository(impl: StatsRepositoryImpl): StatsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindMetricsRepository(impl: MetricsRepositoryImpl): MetricsRepository
 }

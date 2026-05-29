@@ -1,6 +1,7 @@
 package com.servercontrol.data.remote.agent
 
 import com.servercontrol.data.remote.dto.*
+import com.servercontrol.domain.model.DockerAction
 import com.servercontrol.domain.model.ServiceAction
 import com.servercontrol.domain.model.ServerProfile
 import com.servercontrol.util.Resource
@@ -142,6 +143,50 @@ class AgentDataSource {
         lines: Int = 200
     ): Resource<LogResponseDto> =
         safeCall { buildApi(serverProfile).getLogs(source, unit, lines) }
+
+    suspend fun getDockerContainers(serverProfile: ServerProfile): Resource<DockerContainersResponseDto> =
+        safeCall { buildApi(serverProfile).getDockerContainers() }
+
+    suspend fun getDockerImages(serverProfile: ServerProfile): Resource<DockerImagesResponseDto> =
+        safeCall { buildApi(serverProfile).getDockerImages() }
+
+    suspend fun dockerContainerAction(
+        serverProfile: ServerProfile,
+        id: String,
+        action: DockerAction
+    ): Resource<GenericResponseDto> =
+        safeCall {
+            buildApi(serverProfile).dockerContainerAction(id, DockerActionRequest(action.name.lowercase()))
+        }
+
+    suspend fun getDockerContainerLogs(
+        serverProfile: ServerProfile,
+        id: String,
+        lines: Int = 100
+    ): Resource<DockerLogsResponseDto> =
+        safeCall { buildApi(serverProfile).getDockerContainerLogs(id, lines) }
+
+    suspend fun executeCommand(
+        serverProfile: ServerProfile,
+        command: String,
+        timeoutSeconds: Int = 30
+    ): Resource<ExecResponseDto> =
+        safeCall { buildApi(serverProfile).executeCommand(ExecRequest(command, timeoutSeconds)) }
+
+    suspend fun getFailedLogins(
+        serverProfile: ServerProfile,
+        limit: Int = 50
+    ): Resource<FailedLoginsResponseDto> =
+        safeCall { buildApi(serverProfile).getFailedLogins(limit) }
+
+    suspend fun getSslCerts(
+        serverProfile: ServerProfile,
+        domains: String
+    ): Resource<SslCertsResponseDto> =
+        safeCall { buildApi(serverProfile).getSslCerts(domains) }
+
+    suspend fun blockIp(serverProfile: ServerProfile, ip: String): Resource<GenericResponseDto> =
+        safeCall { buildApi(serverProfile).blockIp(BlockIpRequest(ip)) }
 
     private suspend fun <T> safeCall(call: suspend () -> T): Resource<T> = try {
         Resource.Success(call())

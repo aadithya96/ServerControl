@@ -45,6 +45,9 @@ fun DashboardScreen(
     onNavigateToConnections: () -> Unit,
     onNavigateToTerminal: () -> Unit = {},
     onNavigateToAgentInstaller: () -> Unit = {},
+    onNavigateToServices: () -> Unit = {},
+    onNavigateToLogs: () -> Unit = {},
+    onNavigateToMetricsHistory: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     LaunchedEffect(serverId) { viewModel.init(serverId) }
@@ -67,8 +70,19 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    var showOverflowMenu by remember { mutableStateOf(false) }
                     IconButton(onClick = onNavigateToTerminal) {
                         Icon(Icons.Default.Terminal, contentDescription = "Open Terminal")
+                    }
+                    IconButton(onClick = { showOverflowMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More")
+                    }
+                    DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Metrics History") },
+                            onClick = { showOverflowMenu = false; onNavigateToMetricsHistory() },
+                            leadingIcon = { Icon(Icons.Default.ShowChart, contentDescription = null) }
+                        )
                     }
                     IconButton(onClick = viewModel::toggleAutoRefresh) {
                         Icon(
@@ -133,7 +147,9 @@ fun DashboardScreen(
                             onNavigateToProcesses = onNavigateToProcesses,
                             onNavigateToDisk = onNavigateToDisk,
                             onNavigateToFirewall = onNavigateToFirewall,
-                            onNavigateToConnections = onNavigateToConnections
+                            onNavigateToConnections = onNavigateToConnections,
+                            onNavigateToServices = onNavigateToServices,
+                            onNavigateToLogs = onNavigateToLogs
                         )
                     }
                 }
@@ -149,7 +165,9 @@ private fun DashboardContent(
     onNavigateToProcesses: () -> Unit,
     onNavigateToDisk: () -> Unit,
     onNavigateToFirewall: () -> Unit,
-    onNavigateToConnections: () -> Unit
+    onNavigateToConnections: () -> Unit,
+    onNavigateToServices: () -> Unit = {},
+    onNavigateToLogs: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -257,6 +275,19 @@ private fun DashboardContent(
                 onClick = onNavigateToFirewall,
                 modifier = Modifier.weight(1f)
             ) { Text("Firewall") }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ElevatedButton(
+                onClick = onNavigateToServices,
+                modifier = Modifier.weight(1f)
+            ) { Text("Services") }
+            ElevatedButton(
+                onClick = onNavigateToLogs,
+                modifier = Modifier.weight(1f)
+            ) { Text("Logs") }
         }
     }
 }

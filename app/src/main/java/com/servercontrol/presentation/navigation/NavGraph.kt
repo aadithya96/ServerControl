@@ -9,15 +9,21 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.servercontrol.presentation.commands.QuickCommandsScreen
 import com.servercontrol.presentation.connections.ConnectionsScreen
 import com.servercontrol.presentation.dashboard.DashboardScreen
+import com.servercontrol.presentation.docker.DockerScreen
+import com.servercontrol.presentation.security.SecurityScreen
 import com.servercontrol.presentation.disk.DiskScreen
 import com.servercontrol.presentation.firewall.FirewallScreen
+import com.servercontrol.presentation.logs.LogViewerScreen
+import com.servercontrol.presentation.metrics.MetricsHistoryScreen
 import com.servercontrol.presentation.onboarding.OnboardingScreen
 import com.servercontrol.presentation.processes.ProcessListScreen
 import com.servercontrol.presentation.servers.AddServerScreen
 import com.servercontrol.presentation.servers.AgentInstallerScreen
 import com.servercontrol.presentation.servers.ServerListScreen
+import com.servercontrol.presentation.services.ServiceManagerScreen
 import com.servercontrol.presentation.settings.SettingsScreen
 import com.servercontrol.presentation.settings.SettingsViewModel
 import com.servercontrol.presentation.terminal.TerminalScreen
@@ -96,7 +102,10 @@ fun NavGraph() {
                 onNavigateToFirewall = { navController.navigate(Screen.Firewall.createRoute(serverId)) },
                 onNavigateToConnections = { navController.navigate(Screen.Connections.createRoute(serverId)) },
                 onNavigateToTerminal = { navController.navigate(Screen.Terminal.createRoute(serverId)) },
-                onNavigateToAgentInstaller = { navController.navigate(Screen.AgentInstaller.createRoute(serverId)) }
+                onNavigateToAgentInstaller = { navController.navigate(Screen.AgentInstaller.createRoute(serverId)) },
+                onNavigateToServices = { navController.navigate(Screen.ServiceManager.createRoute(serverId)) },
+                onNavigateToLogs = { navController.navigate(Screen.LogViewer.createRoute(serverId)) },
+                onNavigateToMetricsHistory = { navController.navigate(Screen.MetricsHistory.createRoute(serverId)) }
             )
         }
 
@@ -130,6 +139,30 @@ fun NavGraph() {
         ) { backStackEntry ->
             val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
             ConnectionsScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.ServiceManager.route,
+            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
+            ServiceManagerScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.LogViewer.route,
+            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
+            LogViewerScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.MetricsHistory.route,
+            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
+            MetricsHistoryScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Screen.Settings.route) {

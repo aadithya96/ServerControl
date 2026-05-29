@@ -29,4 +29,22 @@ sealed class Screen(val route: String) {
     data object AgentInstaller : Screen("agent_installer/{serverId}") {
         fun createRoute(serverId: Long) = "agent_installer/$serverId"
     }
+    data object ServiceManager : Screen("service_manager/{serverId}") {
+        fun createRoute(serverId: Long) = "service_manager/$serverId"
+    }
+    data object LogViewer : Screen("log_viewer/{serverId}") {
+        fun createRoute(serverId: Long) = "log_viewer/$serverId"
+    }
+    data object MetricsHistory : Screen("metrics_history/{serverId}") {
+        fun createRoute(serverId: Long) = "metrics_history/$serverId"
+    }
+    data object Docker : Screen("docker/{serverId}") {
+        fun createRoute(serverId: Long) = "docker/$serverId"
+    }
+    data object QuickCommands : Screen("quick_commands/{serverId}") {
+        fun createRoute(serverId: Long) = "quick_commands/$serverId"
+    }
+    data object Security : Screen("security/{serverId}") {
+        fun createRoute(serverId: Long) = "security/$serverId"
+    }
 }

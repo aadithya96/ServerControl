@@ -45,6 +45,44 @@ func main() {
 	apiMux.HandleFunc("/api/v1/processes", handlers.ProcessesHandler)
 	apiMux.HandleFunc("/api/v1/disk", handlers.DiskHandler)
 	apiMux.HandleFunc("/api/v1/connections", handlers.ConnectionsHandler)
+	// Services endpoints
+	apiMux.HandleFunc("/api/v1/services/", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		// /api/v1/services/{name}/action  -> POST
+		// /api/v1/services/{name}/logs    -> GET
+		trimmed := strings.TrimPrefix(path, "/api/v1/services/")
+		parts := strings.Split(trimmed, "/")
+		if len(parts) == 2 && parts[1] == "action" {
+			if r.Method != http.MethodPost {
+				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+				return
+			}
+			handlers.ServiceActionHandler(w, r)
+		} else if len(parts) == 2 && parts[1] == "logs" {
+			if r.Method != http.MethodGet {
+				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+				return
+			}
+			handlers.ServiceLogsHandler(w, r)
+		} else {
+			http.NotFound(w, r)
+		}
+	})
+	apiMux.HandleFunc("/api/v1/services", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		handlers.ServicesHandler(w, r)
+	})
+	// Logs endpoint
+	apiMux.HandleFunc("/api/v1/logs", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		handlers.LogsHandler(w, r)
+	})
 	apiMux.HandleFunc("/api/v1/firewall/toggle", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)

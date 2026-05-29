@@ -162,33 +162,33 @@
 - [~] Session state preserved when navigating away (ViewModel-scoped coroutines)
 - [ ] Terminal color themes: Dark (default), Solarized, Dracula, Light
 
-## Phase 16: Service Manager
-- [ ] List all systemd units (services, timers, sockets, mounts)
-- [ ] Filter: All / Active / Failed / Inactive tabs
-- [ ] Service row: name, description, active state, sub-state, enabled/disabled badge
-- [ ] Actions: start / stop / restart / reload / enable / disable (with confirmation)
-- [ ] View service logs inline: journalctl -u <service> -n 100 --no-pager
-- [ ] Service detail screen: unit file path, exec start, environment, dependencies
-- [ ] Search/filter by name
-- [ ] Failed services highlighted in red at top
-- [ ] Agent endpoint: GET /api/v1/services, POST /api/v1/services/{name}/action
+## Phase 16: Service Manager ✅
+- [x] List all systemd units (services, timers, sockets, mounts)
+- [x] Filter: All / Active / Failed / Inactive tabs
+- [x] Service row: name, description, active state, sub-state, enabled/disabled badge
+- [x] Actions: start / stop / restart / reload / enable / disable (with confirmation)
+- [x] View service logs inline: journalctl -u <service> -n 100 --no-pager
+- [x] Service detail screen: unit file path, exec start, environment, dependencies
+- [x] Search/filter by name
+- [x] Failed services highlighted in red at top
+- [x] Agent endpoint: GET /api/v1/services, POST /api/v1/services/{name}/action
 
-## Phase 17: Log Viewer
-- [ ] Source selector: systemd journal, /var/log/syslog, /var/log/auth.log, nginx, apache, custom path
-- [ ] Real-time tail (SSE stream from agent or repeated SSH reads every 2s)
-- [ ] Search with highlight (regex support)
-- [ ] Log level color coding: ERROR=red, WARN=yellow, INFO=white, DEBUG=gray
-- [ ] Line count badge, auto-scroll toggle
-- [ ] Save/export log snippet to clipboard or share
-- [ ] Agent endpoint: GET /api/v1/logs?source=journal&unit=nginx&lines=200&follow=true (SSE)
+## Phase 17: Log Viewer ✅
+- [x] Source selector: systemd journal, /var/log/syslog, /var/log/auth.log, nginx, apache, custom path
+- [x] Real-time tail (SSE stream from agent or repeated SSH reads every 2s)
+- [x] Search with highlight (regex support)
+- [x] Log level color coding: ERROR=red, WARN=yellow, INFO=white, DEBUG=gray
+- [x] Line count badge, auto-scroll toggle
+- [x] Save/export log snippet to clipboard or share
+- [x] Agent endpoint: GET /api/v1/logs?source=journal&unit=nginx&lines=200&follow=true (SSE)
 
-## Phase 18: Metrics History
-- [ ] Room table: MetricSample(id, serverId, timestamp, cpuPercent, memUsedBytes, diskUsedBytes)
-- [ ] Background worker samples every N minutes (configurable), stores to Room
-- [ ] Dashboard history charts: 1h / 6h / 24h / 7d time range selector
-- [ ] Line chart for CPU%, area chart for RAM using Canvas (no library)
-- [ ] Disk usage trend per mount
-- [ ] Export CSV of metrics
+## Phase 18: Metrics History ✅
+- [x] Room table: MetricSample(id, serverId, timestamp, cpuPercent, memUsedBytes, diskUsedBytes)
+- [x] Background worker samples every N minutes (configurable), stores to Room
+- [x] Dashboard history charts: 1h / 6h / 24h / 7d time range selector
+- [x] Line chart for CPU%, area chart for RAM using Canvas (no library)
+- [x] Disk usage trend per mount
+- [x] Export CSV of metrics
 
 ## Phase 19: Docker Integration
 - [ ] Agent endpoints: GET /api/v1/docker/containers, GET /api/v1/docker/images

@@ -4,6 +4,10 @@ import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
 import com.servercontrol.domain.model.*
+import com.servercontrol.domain.model.DockerAction
+import com.servercontrol.domain.model.DockerContainer
+import com.servercontrol.domain.model.DockerImage
+import com.servercontrol.domain.model.FailedLoginAttempt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -308,6 +312,121 @@ class SshDataSource @Inject constructor() {
                 }
                 val output = exec(session, cmd)
                 output.lines().filter { it.isNotBlank() }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun getDockerContainers(profile: ServerProfile): Result<List<DockerContainer>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val output = exec(session,
+                    "docker ps -a --format \"{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.State}}\" 2>/dev/null")
+                output.lines().filter { it.isNotBlank() }.mapNotNull { line ->
+                    val fields = line.split("\t")
+                    if (fields.size < 5) return@mapNotNull null
+                    DockerContainer(
+                        id = fields[0],
+                        shortId = fields[0].take(12),
+                        name = fields[1].trimStart('/'),
+                        image = fields[2],
+                        status = fields[3],
+                        state = fields[4],
+                        created = 0L,
+                        ports = emptyList(),
+                        cpuPercent = 0.0,
+                        memUsedBytes = 0L,
+                        memLimitBytes = 0L,
+                        networkRxBytes = 0L,
+                        networkTxBytes = 0L,
+                        mounts = emptyList(),
+                        envVars = emptyList()
+                    )
+                }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun getDockerImages(profile: ServerProfile): Result<List<DockerImage>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val output = exec(session,
+                    "docker images --format \"{{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.Size}}\" 2>/dev/null")
+                output.lines().filter { it.isNotBlank() }.mapNotNull { line ->
+                    val fields = line.split("\t")
+                    if (fields.size < 2) return@mapNotNull null
+                    DockerImage(id = fields[0], tags = listOf(fields[1]), sizeBytes = 0L, created = 0L)
+                }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun dockerContainerAction(profile: ServerProfile, id: String, action: DockerAction): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val actionStr = action.name.lowercase()
+                exec(session, "docker $actionStr $id 2>&1")
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun getDockerContainerLogs(profile: ServerProfile, id: String, lines: Int = 100): Result<List<String>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val output = exec(session, "docker logs --tail $lines $id 2>&1")
+                output.lines().filter { it.isNotBlank() }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun executeCommand(profile: ServerProfile, command: String): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                exec(session, command)
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun getFailedLogins(profile: ServerProfile, limit: Int = 50): Result<List<FailedLoginAttempt>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                val output = exec(session,
+                    "grep 'Failed password' /var/log/auth.log 2>/dev/null | awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | head -$limit")
+                output.lines().filter { it.isNotBlank() }.mapNotNull { line ->
+                    val parts = line.trim().split("\\s+".toRegex())
+                    if (parts.size < 2) return@mapNotNull null
+                    val count = parts[0].toIntOrNull() ?: return@mapNotNull null
+                    val ip = parts[1]
+                    FailedLoginAttempt(timestamp = "", username = "unknown", sourceIp = ip, count = count)
+                }
+            } finally {
+                session.disconnect()
+            }
+        }
+    }
+
+    suspend fun blockIp(profile: ServerProfile, ip: String): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val session = openSession(profile)
+            try {
+                exec(session, "sudo iptables -I INPUT -s $ip -j DROP 2>&1")
             } finally {
                 session.disconnect()
             }
