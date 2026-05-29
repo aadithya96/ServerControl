@@ -1,0 +1,118 @@
+package com.servercontrol.widget
+
+import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.glance.GlanceId
+import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
+import androidx.glance.action.actionStartActivity
+import androidx.glance.action.clickable
+import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.LinearProgressIndicator
+import androidx.glance.appwidget.provideContent
+import androidx.glance.background
+import androidx.glance.currentState
+import androidx.glance.layout.Alignment
+import androidx.glance.layout.Column
+import androidx.glance.layout.Row
+import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
+import androidx.glance.layout.padding
+import androidx.glance.layout.width
+import androidx.glance.state.GlanceStateDefinition
+import androidx.glance.state.PreferencesGlanceStateDefinition
+import androidx.glance.text.FontWeight
+import androidx.glance.text.Text
+import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
+import com.servercontrol.MainActivity
+
+class ServerMetricsWidget : GlanceAppWidget() {
+
+    override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
+
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        provideContent {
+            ServerMetricsWidgetContent(context)
+        }
+    }
+}
+
+@Composable
+fun ServerMetricsWidgetContent(context: Context) {
+    val prefs = currentState<androidx.datastore.preferences.core.Preferences>()
+    val serverName = prefs[stringPreferencesKeyCompat("widget_server_name")] ?: "No server"
+    val cpuPercent = (prefs[floatPreferencesKeyCompat("widget_cpu_percent")] ?: 0f) / 100f
+    val ramPercent = (prefs[floatPreferencesKeyCompat("widget_ram_percent")] ?: 0f) / 100f
+    val diskPercent = (prefs[floatPreferencesKeyCompat("widget_disk_percent")] ?: 0f) / 100f
+
+    GlanceTheme {
+        Column(
+            modifier = GlanceModifier
+                .fillMaxSize()
+                .background(ColorProvider(Color(0xFF1E1E1E)))
+                .padding(12.dp_glance)
+                .clickable(actionStartActivity<MainActivity>())
+        ) {
+            // Server name header
+            Text(
+                text = serverName,
+                style = TextStyle(
+                    color = ColorProvider(Color.White),
+                    fontWeight = FontWeight.Bold
+                ),
+                maxLines = 1
+            )
+
+            Spacer(modifier = GlanceModifier.height(8.dp_glance))
+
+            // CPU bar
+            MetricBar(label = "CPU", progress = cpuPercent.coerceIn(0f, 1f))
+
+            Spacer(modifier = GlanceModifier.height(6.dp_glance))
+
+            // RAM bar
+            MetricBar(label = "RAM", progress = ramPercent.coerceIn(0f, 1f))
+
+            Spacer(modifier = GlanceModifier.height(6.dp_glance))
+
+            // Disk bar
+            MetricBar(label = "Dsk", progress = diskPercent.coerceIn(0f, 1f))
+        }
+    }
+}
+
+@Composable
+private fun MetricBar(label: String, progress: Float) {
+    Row(
+        modifier = GlanceModifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = TextStyle(color = ColorProvider(Color(0xFFAAAAAA))),
+            modifier = GlanceModifier.width(28.dp_glance)
+        )
+        Spacer(modifier = GlanceModifier.width(4.dp_glance))
+        LinearProgressIndicator(
+            progress = progress,
+            modifier = GlanceModifier.defaultWeight(),
+            color = ColorProvider(barColor(progress)),
+            backgroundColor = ColorProvider(Color(0xFF3A3A3A))
+        )
+        Spacer(modifier = GlanceModifier.width(4.dp_glance))
+        Text(
+            text = "${"%.0f".format(progress * 100)}%",
+            style = TextStyle(color = ColorProvider(Color(0xFFAAAAAA)))
+        )
+    }
+}
+
+private fun barColor(progress: Float): Color = when {
+    progress >= 0.80f -> Color(0xFFF44336)
+    progress >= 0.60f -> Color(0xFFFFC107)
+    else -> Color(0xFF4CAF50)
+}

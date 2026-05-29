@@ -16,7 +16,7 @@ import com.servercontrol.data.local.entity.ServerProfileEntity
         SavedCommandEntity::class,
         AuditLogEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -75,6 +75,14 @@ abstract class AppDatabase : RoomDatabase() {
                         details TEXT NOT NULL,
                         result TEXT NOT NULL
                     )"""
+                )
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE server_profiles ADD COLUMN groupName TEXT NOT NULL DEFAULT 'default'"
                 )
             }
         }
