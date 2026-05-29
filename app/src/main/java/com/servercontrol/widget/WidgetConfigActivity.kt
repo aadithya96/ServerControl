@@ -76,7 +76,7 @@ class WidgetConfigActivity : ComponentActivity() {
                                 androidx.glance.appwidget.state.updateAppWidgetState(
                                     context = this@WidgetConfigActivity,
                                     definition = androidx.glance.state.PreferencesGlanceStateDefinition,
-                                    id = id
+                                    glanceId = id
                                 ) { prefs ->
                                     prefs.toMutablePreferences().apply {
                                         this[stringPreferencesKey("widget_server_name")] = server.name

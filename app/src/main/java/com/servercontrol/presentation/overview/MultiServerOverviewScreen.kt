@@ -25,9 +25,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.servercontrol.domain.model.ServerProfile
 import com.servercontrol.domain.model.SystemStats
@@ -277,40 +277,36 @@ private fun ServerOverviewCard(
 private fun MiniArcGauge(percent: Double) {
     val color = cpuColor(percent)
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val strokeWidth = 6.dp.toPx()
-        val inset = strokeWidth / 2f
-        val arcRect = androidx.compose.ui.geometry.Rect(inset, inset, size.width - inset, size.height - inset)
-        // Background track
-        drawArc(
-            color = trackColor,
-            startAngle = 135f,
-            sweepAngle = 270f,
-            useCenter = false,
-            topLeft = arcRect.topLeft,
-            size = Size(arcRect.width, arcRect.height),
-            style = Stroke(width = strokeWidth)
-        )
-        // Progress arc
-        drawArc(
-            color = color,
-            startAngle = 135f,
-            sweepAngle = (270f * (percent / 100.0).toFloat()).coerceIn(0f, 270f),
-            useCenter = false,
-            topLeft = arcRect.topLeft,
-            size = Size(arcRect.width, arcRect.height),
-            style = Stroke(width = strokeWidth)
-        )
-        // Center text - draw manually
-        val text = "${"%.0f".format(percent)}%"
-        drawIntoCanvas { canvas ->
-            val paint = android.graphics.Paint().apply {
-                textAlign = android.graphics.Paint.Align.CENTER
-                textSize = 10.dp.toPx()
-                this.color = android.graphics.Color.WHITE
-            }
-            canvas.nativeCanvas.drawText(text, size.width / 2f, size.height / 2f + paint.textSize / 3f, paint)
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidth = 6.dp.toPx()
+            val inset = strokeWidth / 2f
+            val arcRect = androidx.compose.ui.geometry.Rect(inset, inset, size.width - inset, size.height - inset)
+            drawArc(
+                color = trackColor,
+                startAngle = 135f,
+                sweepAngle = 270f,
+                useCenter = false,
+                topLeft = arcRect.topLeft,
+                size = Size(arcRect.width, arcRect.height),
+                style = Stroke(width = strokeWidth)
+            )
+            drawArc(
+                color = color,
+                startAngle = 135f,
+                sweepAngle = (270f * (percent / 100.0).toFloat()).coerceIn(0f, 270f),
+                useCenter = false,
+                topLeft = arcRect.topLeft,
+                size = Size(arcRect.width, arcRect.height),
+                style = Stroke(width = strokeWidth)
+            )
         }
+        Text(
+            text = "${"%.0f".format(percent)}%",
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 8.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
