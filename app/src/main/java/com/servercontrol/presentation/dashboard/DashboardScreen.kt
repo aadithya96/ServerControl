@@ -43,6 +43,8 @@ fun DashboardScreen(
     onNavigateToDisk: () -> Unit,
     onNavigateToFirewall: () -> Unit,
     onNavigateToConnections: () -> Unit,
+    onNavigateToTerminal: () -> Unit = {},
+    onNavigateToAgentInstaller: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     LaunchedEffect(serverId) { viewModel.init(serverId) }
@@ -65,6 +67,9 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToTerminal) {
+                        Icon(Icons.Default.Terminal, contentDescription = "Open Terminal")
+                    }
                     IconButton(onClick = viewModel::toggleAutoRefresh) {
                         Icon(
                             if (autoRefresh) Icons.Default.Sync else Icons.Default.SyncDisabled,

@@ -16,9 +16,11 @@ import com.servercontrol.presentation.firewall.FirewallScreen
 import com.servercontrol.presentation.onboarding.OnboardingScreen
 import com.servercontrol.presentation.processes.ProcessListScreen
 import com.servercontrol.presentation.servers.AddServerScreen
+import com.servercontrol.presentation.servers.AgentInstallerScreen
 import com.servercontrol.presentation.servers.ServerListScreen
 import com.servercontrol.presentation.settings.SettingsScreen
 import com.servercontrol.presentation.settings.SettingsViewModel
+import com.servercontrol.presentation.terminal.TerminalScreen
 
 @Composable
 fun NavGraph() {
@@ -56,6 +58,15 @@ fun NavGraph() {
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onOpenTerminal = { serverId ->
+                    navController.navigate(Screen.Terminal.createRoute(serverId))
+                },
+                onInstallAgent = { serverId ->
+                    navController.navigate(Screen.AgentInstaller.createRoute(serverId))
+                },
+                onEditServer = { serverId ->
+                    navController.navigate(Screen.AddServer.createRoute(serverId))
                 }
             )
         }
@@ -83,7 +94,9 @@ fun NavGraph() {
                 onNavigateToProcesses = { navController.navigate(Screen.Processes.createRoute(serverId)) },
                 onNavigateToDisk = { navController.navigate(Screen.Disk.createRoute(serverId)) },
                 onNavigateToFirewall = { navController.navigate(Screen.Firewall.createRoute(serverId)) },
-                onNavigateToConnections = { navController.navigate(Screen.Connections.createRoute(serverId)) }
+                onNavigateToConnections = { navController.navigate(Screen.Connections.createRoute(serverId)) },
+                onNavigateToTerminal = { navController.navigate(Screen.Terminal.createRoute(serverId)) },
+                onNavigateToAgentInstaller = { navController.navigate(Screen.AgentInstaller.createRoute(serverId)) }
             )
         }
 
@@ -121,6 +134,29 @@ fun NavGraph() {
 
         composable(Screen.Settings.route) {
             SettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.Terminal.route,
+            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
+            TerminalScreen(
+                serverId = serverId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.AgentInstaller.route,
+            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
+            AgentInstallerScreen(
+                serverId = serverId,
+                onNavigateBack = { navController.popBackStack() },
+                onAgentConfigured = { navController.popBackStack() }
+            )
         }
     }
 }

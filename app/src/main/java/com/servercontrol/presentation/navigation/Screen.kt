@@ -23,4 +23,10 @@ sealed class Screen(val route: String) {
     data object Connections : Screen("connections/{serverId}") {
         fun createRoute(serverId: Long) = "connections/$serverId"
     }
+    data object Terminal : Screen("terminal/{serverId}") {
+        fun createRoute(serverId: Long) = "terminal/$serverId"
+    }
+    data object AgentInstaller : Screen("agent_installer/{serverId}") {
+        fun createRoute(serverId: Long) = "agent_installer/$serverId"
+    }
 }

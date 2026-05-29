@@ -10,6 +10,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.VpnKey
@@ -30,6 +33,9 @@ fun ServerListScreen(
     onServerClick: (Long) -> Unit,
     onAddServer: () -> Unit,
     onSettingsClick: () -> Unit,
+    onOpenTerminal: (Long) -> Unit = {},
+    onInstallAgent: (Long) -> Unit = {},
+    onEditServer: (Long) -> Unit = {},
     viewModel: ServerListViewModel = hiltViewModel()
 ) {
     val servers by viewModel.servers.collectAsState()
@@ -94,7 +100,10 @@ fun ServerListScreen(
                             viewModel.selectServer(server.id)
                             onServerClick(server.id)
                         },
-                        onDelete = { serverToDelete = server }
+                        onDelete = { serverToDelete = server },
+                        onOpenTerminal = { onOpenTerminal(server.id) },
+                        onInstallAgent = { onInstallAgent(server.id) },
+                        onEdit = { onEditServer(server.id) }
                     )
                 }
             }
@@ -126,8 +135,12 @@ fun ServerListScreen(
 private fun ServerCard(
     server: ServerProfile,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onOpenTerminal: () -> Unit = {},
+    onInstallAgent: () -> Unit = {},
+    onEdit: () -> Unit = {}
 ) {
+    var showMenu by remember { mutableStateOf(false) }
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -200,12 +213,43 @@ private fun ServerCard(
                 ) {}
             }
 
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error
-                )
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Open Terminal") },
+                        onClick = { showMenu = false; onOpenTerminal() },
+                        leadingIcon = { Icon(Icons.Default.Terminal, contentDescription = null) }
+                    )
+                    if (server.authType == AuthType.SSH_PASSWORD || server.authType == AuthType.SSH_KEY) {
+                        DropdownMenuItem(
+                            text = { Text("Install Agent") },
+                            onClick = { showMenu = false; onInstallAgent() },
+                            leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) }
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text("Edit") },
+                        onClick = { showMenu = false; onEdit() },
+                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                        onClick = { showMenu = false; onDelete() },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    )
+                }
             }
         }
     }

@@ -69,4 +69,22 @@
     <string name="get_started">Get Started</string>
     <string name="next">Next</string>
     <string name="skip">Skip</string>
+    <!-- Terminal -->
+    <string name="terminal_title">Terminal</string>
+    <string name="add_tab">Add Tab</string>
+    <string name="close_tab">Close Tab</string>
+    <string name="send">Send</string>
+    <string name="extended_key_tab">Tab</string>
+    <string name="extended_key_ctrl">Ctrl</string>
+    <string name="extended_key_esc">Esc</string>
+    <string name="reconnect">Reconnect</string>
+    <string name="disconnected">Disconnected</string>
+    <!-- Agent Installer -->
+    <string name="agent_installer_title">Agent Installer</string>
+    <string name="install_agent">Install Agent</string>
+    <string name="uninstall_agent">Uninstall Agent</string>
+    <string name="applying_token">Applying token…</string>
+    <string name="token_copied">Token copied to clipboard</string>
+    <string name="agent_installed_success">Agent Installed Successfully!</string>
+    <string name="install_agent_confirm">Install the ServerControl agent on this server?</string>
 </resources>

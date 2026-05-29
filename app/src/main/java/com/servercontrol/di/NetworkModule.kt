@@ -2,6 +2,7 @@ package com.servercontrol.di
 
 import com.servercontrol.data.remote.agent.AgentDataSource
 import com.servercontrol.data.remote.ssh.SshDataSource
+import com.servercontrol.terminal.TerminalManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,4 +20,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideSshDataSource(): SshDataSource = SshDataSource()
+
+    @Provides
+    @Singleton
+    fun provideTerminalManager(): TerminalManager = TerminalManager()
 }
