@@ -10,15 +10,17 @@ import androidx.compose.ui.text.style.TextDecoration
 
 object AnsiParser {
 
-    // ESC sequence regex: ESC [ ... m  or  ESC [ ... H/J/K/etc
-    private val escapeRegex = Regex("\\[([0-9;]*)([A-Za-z])")
+    private const val ESC = ""
+
+    // ESC sequence regex: ESC [ <params> <command>
+    private val escapeRegex = Regex("${Regex.escape(ESC)}\\[([0-9;]*)([A-Za-z])")
 
     fun parse(raw: String, colors: TerminalColorScheme = TerminalThemes.DARK): AnnotatedString {
-        // Strip clear screen sequences and handle cursor movement by stripping them
+        // Strip clear screen / cursor reset sequences before parsing colour codes
         val cleaned = raw
-            .replace("[2J", "")
-            .replace("[H", "")
-            .replace("[3J", "")
+            .replace("$ESC[2J", "")
+            .replace("$ESC[H", "")
+            .replace("$ESC[3J", "")
 
         val ansiColors = mapOf(
             30 to colors.black,
