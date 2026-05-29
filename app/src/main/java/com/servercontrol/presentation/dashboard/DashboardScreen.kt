@@ -48,6 +48,9 @@ fun DashboardScreen(
     onNavigateToServices: () -> Unit = {},
     onNavigateToLogs: () -> Unit = {},
     onNavigateToMetricsHistory: () -> Unit = {},
+    onNavigateToDocker: () -> Unit = {},
+    onNavigateToQuickCommands: () -> Unit = {},
+    onNavigateToSecurity: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     LaunchedEffect(serverId) { viewModel.init(serverId) }
@@ -149,7 +152,10 @@ fun DashboardScreen(
                             onNavigateToFirewall = onNavigateToFirewall,
                             onNavigateToConnections = onNavigateToConnections,
                             onNavigateToServices = onNavigateToServices,
-                            onNavigateToLogs = onNavigateToLogs
+                            onNavigateToLogs = onNavigateToLogs,
+                            onNavigateToDocker = onNavigateToDocker,
+                            onNavigateToQuickCommands = onNavigateToQuickCommands,
+                            onNavigateToSecurity = onNavigateToSecurity
                         )
                     }
                 }
@@ -167,7 +173,10 @@ private fun DashboardContent(
     onNavigateToFirewall: () -> Unit,
     onNavigateToConnections: () -> Unit,
     onNavigateToServices: () -> Unit = {},
-    onNavigateToLogs: () -> Unit = {}
+    onNavigateToLogs: () -> Unit = {},
+    onNavigateToDocker: () -> Unit = {},
+    onNavigateToQuickCommands: () -> Unit = {},
+    onNavigateToSecurity: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -289,6 +298,23 @@ private fun DashboardContent(
                 modifier = Modifier.weight(1f)
             ) { Text("Logs") }
         }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ElevatedButton(
+                onClick = onNavigateToDocker,
+                modifier = Modifier.weight(1f)
+            ) { Text("Docker") }
+            ElevatedButton(
+                onClick = onNavigateToQuickCommands,
+                modifier = Modifier.weight(1f)
+            ) { Text("Commands") }
+        }
+        ElevatedButton(
+            onClick = onNavigateToSecurity,
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Security") }
     }
 }
 

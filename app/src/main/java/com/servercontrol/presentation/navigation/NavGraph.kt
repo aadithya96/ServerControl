@@ -105,7 +105,10 @@ fun NavGraph() {
                 onNavigateToAgentInstaller = { navController.navigate(Screen.AgentInstaller.createRoute(serverId)) },
                 onNavigateToServices = { navController.navigate(Screen.ServiceManager.createRoute(serverId)) },
                 onNavigateToLogs = { navController.navigate(Screen.LogViewer.createRoute(serverId)) },
-                onNavigateToMetricsHistory = { navController.navigate(Screen.MetricsHistory.createRoute(serverId)) }
+                onNavigateToMetricsHistory = { navController.navigate(Screen.MetricsHistory.createRoute(serverId)) },
+                onNavigateToDocker = { navController.navigate(Screen.Docker.createRoute(serverId)) },
+                onNavigateToQuickCommands = { navController.navigate(Screen.QuickCommands.createRoute(serverId)) },
+                onNavigateToSecurity = { navController.navigate(Screen.Security.createRoute(serverId)) }
             )
         }
 

@@ -190,29 +190,29 @@
 - [x] Disk usage trend per mount
 - [x] Export CSV of metrics
 
-## Phase 19: Docker Integration
-- [ ] Agent endpoints: GET /api/v1/docker/containers, GET /api/v1/docker/images
-- [ ] POST /api/v1/docker/containers/{id}/action (start/stop/restart/remove)
-- [ ] GET /api/v1/docker/containers/{id}/logs (last N lines)
-- [ ] Container list: name, image, status, ports, CPU%, MEM%
-- [ ] Container detail: env vars, mounts, network, resource limits
-- [ ] Image list: name, tag, size, created
-- [ ] Container logs viewer (reuse Log Viewer component)
+## Phase 19: Docker Integration ✅
+- [x] Agent endpoints: GET /api/v1/docker/containers, GET /api/v1/docker/images
+- [x] POST /api/v1/docker/containers/{id}/action (start/stop/restart/remove)
+- [x] GET /api/v1/docker/containers/{id}/logs (last N lines)
+- [x] Container list: name, image, status, ports, CPU%, MEM%
+- [x] Container detail: env vars, mounts, network, resource limits
+- [x] Image list: name, tag, size, created
+- [x] Container logs viewer (reuse Log Viewer component)
 
-## Phase 20: Quick Commands / Runbooks
-- [ ] Room table: SavedCommand(id, serverId?, name, command, description)
-- [ ] Command library screen: list saved commands, add/edit/delete
-- [ ] Run command button: SSH exec or POST /api/v1/exec to agent
-- [ ] Output shown in bottom sheet with monospace font
-- [ ] Built-in command templates: "Check disk", "Restart nginx", "Tail syslog", "Top 10 CPU processes"
-- [ ] Import/export commands as JSON
+## Phase 20: Quick Commands / Runbooks ✅
+- [x] Room table: SavedCommand(id, serverId?, name, command, description)
+- [x] Command library screen: list saved commands, add/edit/delete
+- [x] Run command button: SSH exec or POST /api/v1/exec to agent
+- [x] Output shown in bottom sheet with monospace font
+- [x] Built-in command templates: "Check disk", "Restart nginx", "Tail syslog", "Top 10 CPU processes"
+- [x] Import/export commands as JSON
 
-## Phase 21: Security & Audit
-- [ ] Failed SSH login monitor: parse /var/log/auth.log for failed attempts
-- [ ] Top attacking IPs with attempt count, last seen, country (ip-api.com lookup)
-- [ ] One-tap block IP via iptables (with confirmation)
-- [ ] SSL certificate expiry monitor for domains/certs on server
-- [ ] Local audit log: every app action (kill process, toggle firewall, restart service) logged with timestamp
+## Phase 21: Security & Audit ✅
+- [x] Failed SSH login monitor: parse /var/log/auth.log for failed attempts
+- [x] Top attacking IPs with attempt count, last seen, country (ip-api.com lookup)
+- [x] One-tap block IP via iptables (with confirmation)
+- [x] SSL certificate expiry monitor for domains/certs on server
+- [x] Local audit log: every app action (kill process, toggle firewall, restart service) logged with timestamp
 - [ ] Biometric lock: require fingerprint/PIN to open app
 
 ## Phase 22: Widgets & Home Screen

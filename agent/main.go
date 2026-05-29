@@ -112,6 +112,33 @@ func main() {
 		handlers.KillProcessHandler(w, r)
 	})
 
+	// Docker endpoints
+	apiMux.HandleFunc("/api/v1/docker/containers/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/action") {
+			handlers.DockerContainerActionHandler(w, r)
+		} else if strings.HasSuffix(r.URL.Path, "/logs") {
+			handlers.DockerContainerLogsHandler(w, r)
+		} else {
+			http.NotFound(w, r)
+		}
+	})
+	apiMux.HandleFunc("/api/v1/docker/containers", handlers.DockerContainersHandler)
+	apiMux.HandleFunc("/api/v1/docker/images", handlers.DockerImagesHandler)
+
+	// Exec endpoint
+	apiMux.HandleFunc("/api/v1/exec", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		handlers.ExecHandler(w, r)
+	})
+
+	// Security endpoints
+	apiMux.HandleFunc("/api/v1/security/failed-logins", handlers.FailedLoginsHandler)
+	apiMux.HandleFunc("/api/v1/security/ssl", handlers.SslCertHandler)
+	apiMux.HandleFunc("/api/v1/security/block-ip", handlers.BlockIpHandler)
+
 	// Wrap API with auth + CORS + logging
 	protectedAPI := middleware.Chain(apiMux,
 		middleware.CORS,
