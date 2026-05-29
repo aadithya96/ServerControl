@@ -7,32 +7,23 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.servercontrol.BuildConfig
 import kotlinx.coroutines.launch
-
-private val INSTALL_COMMAND =
-    "curl -sSL ${BuildConfig.INSTALL_SCRIPT_URL} | sudo bash"
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OnboardingScreen(onComplete: () -> Unit) {
     val pagerState = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
-    val clipboardManager = LocalClipboardManager.current
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -48,9 +39,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             ) { page ->
                 when (page) {
                     0 -> OnboardingPage1()
-                    1 -> OnboardingPage2(
-                        onCopy = { clipboardManager.setText(AnnotatedString(INSTALL_COMMAND)) }
-                    )
+                    1 -> OnboardingPage2()
                     2 -> OnboardingPage3()
                 }
             }
@@ -142,7 +131,7 @@ private fun OnboardingPage1() {
 }
 
 @Composable
-private fun OnboardingPage2(onCopy: () -> Unit) {
+private fun OnboardingPage2() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -151,7 +140,7 @@ private fun OnboardingPage2(onCopy: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            Icons.Default.Terminal,
+            Icons.Default.Download,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
             tint = MaterialTheme.colorScheme.primary
@@ -162,36 +151,46 @@ private fun OnboardingPage2(onCopy: () -> Unit) {
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         Text(
-            text = "Run this one-liner on your server:",
+            text = "When you add a server using SSH credentials, the app will prompt you to install the monitoring daemon automatically — no copy-pasting required.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = INSTALL_COMMAND,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
-                    color = Color(0xFF4CAF50)
-                )
-                IconButton(onClick = onCopy) {
-                    Icon(
-                        Icons.Default.ContentCopy,
-                        contentDescription = "Copy to clipboard",
-                        tint = Color.White
-                    )
+                listOf(
+                    "Connects via SSH using your credentials",
+                    "Downloads and installs the agent binary",
+                    "Creates a systemd service for auto-start",
+                    "Generates a secure authentication token"
+                ).forEach { step ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = step,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         }

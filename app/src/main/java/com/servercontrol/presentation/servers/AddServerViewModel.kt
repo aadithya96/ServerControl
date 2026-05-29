@@ -15,6 +15,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -40,6 +41,13 @@ class AddServerViewModel @Inject constructor(
 
     val testConnectionState: MutableStateFlow<Resource<Long>?> = MutableStateFlow(null)
     val saveState: MutableStateFlow<Resource<Unit>?> = MutableStateFlow(null)
+
+    private val _pendingInstallServerId = MutableStateFlow<Long?>(null)
+    val pendingInstallServerId: StateFlow<Long?> = _pendingInstallServerId.asStateFlow()
+
+    fun clearInstallPrompt() {
+        _pendingInstallServerId.value = null
+    }
 
     val isFormValid: StateFlow<Boolean> = combine(
         snapshotFlow { displayName },
@@ -101,7 +109,10 @@ class AddServerViewModel @Inject constructor(
                 if (editServerId != null) {
                     serverRepository.updateServer(profile.copy(id = editServerId))
                 } else {
-                    serverRepository.insertServer(profile)
+                    val newId = serverRepository.insertServer(profile)
+                    if (authType == AuthType.SSH_PASSWORD || authType == AuthType.SSH_KEY) {
+                        _pendingInstallServerId.value = newId
+                    }
                 }
                 saveState.value = Resource.Success(Unit)
             } catch (e: Exception) {
