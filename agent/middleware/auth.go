@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // BearerAuth returns a middleware that requires a valid Bearer token.
@@ -24,12 +26,13 @@ func BearerAuth(token string) func(http.Handler) http.Handler {
 	}
 }
 
-// Logging logs each request.
+// Logging logs each request with method, path, status, and duration.
 func Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Use a response writer that captures status
+		start := time.Now()
 		lw := &loggingResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(lw, r)
+		log.Printf("%s %s %d %s", r.Method, r.URL.Path, lw.statusCode, time.Since(start))
 	})
 }
 

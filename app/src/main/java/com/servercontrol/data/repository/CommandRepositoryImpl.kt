@@ -10,6 +10,7 @@ import com.servercontrol.domain.model.SavedCommand
 import com.servercontrol.domain.repository.CommandRepository
 import com.servercontrol.util.BuiltInCommands
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -39,12 +40,8 @@ class CommandRepositoryImpl @Inject constructor(
     }
 
     override suspend fun exportJson(): String {
-        var result = ""
-        getAllCommands().collect { commands ->
-            result = Gson().toJson(commands.filter { !it.isBuiltIn })
-            return@collect
-        }
-        return result
+        val commands = getAllCommands().first()
+        return Gson().toJson(commands.filter { !it.isBuiltIn })
     }
 
     override suspend fun importJson(json: String) {
