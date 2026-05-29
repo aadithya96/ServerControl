@@ -5,31 +5,42 @@ on:
     branches:
       - main
 
+concurrency:
+  group: pr-checks-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ktlint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6.0.2
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v5.2.0
+      - name: Cache ktlint
+        id: cache-ktlint
+        uses: actions/cache@v5.0.5
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          path: ktlint
+          key: ktlint-1.1.1
 
       - name: Download ktlint
+        if: steps.cache-ktlint.outputs.cache-hit != 'true'
         run: |
           curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.1.1/ktlint
           chmod +x ktlint
 
+      - name: Ensure ktlint is executable
+        run: chmod +x ktlint
+
       - name: Run ktlint
         run: |
+          mkdir -p build
           ./ktlint --reporter=checkstyle,output=build/ktlint-report.xml 'app/src/**/*.kt' || true
 
       - name: Upload ktlint report
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ktlint-report
@@ -37,6 +48,7 @@ jobs:
 
   dependency-check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -54,7 +66,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}
+          key: gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
           restore-keys: |
             gradle-
 
@@ -63,14 +75,15 @@ jobs:
 
       - name: Check dependencies
         run: |
-          if ./gradlew help --task dependencyUpdates > /dev/null 2>&1; then
-            ./gradlew dependencyUpdates
+          if ./gradlew help --task dependencyUpdates --no-daemon > /dev/null 2>&1; then
+            ./gradlew dependencyUpdates --no-daemon
           else
-            ./gradlew dependencies
+            ./gradlew dependencies --no-daemon
           fi
 
   size-report:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - name: Checkout code
@@ -88,7 +101,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}
+          key: gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
           restore-keys: |
             gradle-
 
@@ -96,7 +109,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --parallel --build-cache --stacktrace
 
       - name: Get APK size
         id: apk-size
