@@ -69,7 +69,7 @@ log_info "Installing ServerControl Agent v$AGENT_VERSION..."
 
 BINARY_PATH="$INSTALL_DIR/$BINARY_NAME"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" && pwd)"
 
 if [[ -f "$SCRIPT_DIR/main.go" ]]; then
     # Running from inside the cloned repo — build directly
@@ -135,7 +135,7 @@ chmod 640 "$CONFIG_FILE"
 log_info "Config written to $CONFIG_FILE"
 
 # --- Install systemd service ---
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" && pwd)"
 if [[ -f "$SCRIPT_DIR/servercontrol.service" ]]; then
     cp "$SCRIPT_DIR/servercontrol.service" "$SERVICE_FILE"
 else
