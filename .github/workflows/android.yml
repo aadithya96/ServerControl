@@ -105,6 +105,6 @@ jobs:
         if: always()
         with:
           name: Unit Tests
-          format: java-junit
+          reporter: java-junit
           path: app/build/test-results/**/*.xml
           fail-on-error: 'false'
