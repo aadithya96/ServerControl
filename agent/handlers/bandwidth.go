@@ -3,6 +3,7 @@ package handlers
 import (
 	"bufio"
 	"encoding/json"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -34,9 +35,15 @@ func readNetDev() (map[string]ifaceCounters, error) {
 		return nil, err
 	}
 	defer f.Close()
+	return parseNetDev(f)
+}
 
+// parseNetDev parses the contents of a /proc/net/dev-formatted stream and returns
+// per-interface cumulative byte counters. Split out from readNetDev so it can be
+// unit-tested without touching the real /proc filesystem.
+func parseNetDev(r io.Reader) (map[string]ifaceCounters, error) {
 	result := make(map[string]ifaceCounters)
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
 		idx := strings.IndexByte(line, ':')
