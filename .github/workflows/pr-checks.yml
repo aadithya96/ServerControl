@@ -84,6 +84,9 @@ jobs:
   size-report:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout code

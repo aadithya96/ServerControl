@@ -11,24 +11,19 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.servercontrol.presentation.commands.QuickCommandsScreen
 import com.servercontrol.presentation.connections.ConnectionsScreen
-import com.servercontrol.presentation.dashboard.DashboardScreen
-import com.servercontrol.presentation.docker.DockerScreen
-import com.servercontrol.presentation.security.SecurityScreen
 import com.servercontrol.presentation.disk.DiskScreen
 import com.servercontrol.presentation.firewall.FirewallScreen
-import com.servercontrol.presentation.logs.LogViewerScreen
 import com.servercontrol.presentation.metrics.MetricsHistoryScreen
-import com.servercontrol.presentation.onboarding.OnboardingScreen
-import com.servercontrol.presentation.processes.ProcessListScreen
 import com.servercontrol.presentation.network.BandwidthScreen
+import com.servercontrol.presentation.onboarding.OnboardingScreen
 import com.servercontrol.presentation.overview.MultiServerOverviewScreen
+import com.servercontrol.presentation.security.SecurityScreen
 import com.servercontrol.presentation.servers.AddServerScreen
 import com.servercontrol.presentation.servers.AgentInstallerScreen
 import com.servercontrol.presentation.servers.QrScanScreen
 import com.servercontrol.presentation.servers.QrShareScreen
 import com.servercontrol.presentation.servers.ServerListScreen
 import com.servercontrol.presentation.services.ServiceManagerScreen
-import com.servercontrol.presentation.settings.SettingsScreen
 import com.servercontrol.presentation.settings.SettingsViewModel
 import com.servercontrol.presentation.terminal.TerminalScreen
 
@@ -54,14 +49,15 @@ fun NavGraph() {
                     navController.navigate(Screen.ServerList.route) {
                         popUpTo(Screen.Onboarding.route) { inclusive = true }
                     }
-                }
+                },
+                onScanQr = { navController.navigate(Screen.QrScan.route) }
             )
         }
 
         composable(Screen.ServerList.route) {
             ServerListScreen(
                 onServerClick = { serverId ->
-                    navController.navigate(Screen.Dashboard.createRoute(serverId))
+                    navController.navigate(Screen.ServerDetail.createRoute(serverId))
                 },
                 onAddServer = {
                     navController.navigate(Screen.AddServer.createRoute())
@@ -111,35 +107,25 @@ fun NavGraph() {
             )
         }
 
+        // New server-detail container with bottom navigation (Monitor/Processes/Containers/Logs/Settings)
         composable(
-            route = Screen.Dashboard.route,
+            route = Screen.ServerDetail.route,
             arguments = listOf(navArgument("serverId") { type = NavType.LongType })
         ) { backStackEntry ->
             val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
-            DashboardScreen(
+            ServerDetailContainer(
                 serverId = serverId,
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToProcesses = { navController.navigate(Screen.Processes.createRoute(serverId)) },
-                onNavigateToDisk = { navController.navigate(Screen.Disk.createRoute(serverId)) },
-                onNavigateToFirewall = { navController.navigate(Screen.Firewall.createRoute(serverId)) },
-                onNavigateToConnections = { navController.navigate(Screen.Connections.createRoute(serverId)) },
                 onNavigateToTerminal = { navController.navigate(Screen.Terminal.createRoute(serverId)) },
-                onNavigateToAgentInstaller = { navController.navigate(Screen.AgentInstaller.createRoute(serverId)) },
+                onNavigateToFirewall = { navController.navigate(Screen.Firewall.createRoute(serverId)) },
+                onNavigateToDisk = { navController.navigate(Screen.Disk.createRoute(serverId)) },
+                onNavigateToConnections = { navController.navigate(Screen.Connections.createRoute(serverId)) },
                 onNavigateToServices = { navController.navigate(Screen.ServiceManager.createRoute(serverId)) },
-                onNavigateToLogs = { navController.navigate(Screen.LogViewer.createRoute(serverId)) },
                 onNavigateToMetricsHistory = { navController.navigate(Screen.MetricsHistory.createRoute(serverId)) },
-                onNavigateToDocker = { navController.navigate(Screen.Docker.createRoute(serverId)) },
                 onNavigateToQuickCommands = { navController.navigate(Screen.QuickCommands.createRoute(serverId)) },
-                onNavigateToSecurity = { navController.navigate(Screen.Security.createRoute(serverId)) }
+                onNavigateToSecurity = { navController.navigate(Screen.Security.createRoute(serverId)) },
+                onNavigateToAgentInstaller = { navController.navigate(Screen.AgentInstaller.createRoute(serverId)) },
             )
-        }
-
-        composable(
-            route = Screen.Processes.route,
-            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
-        ) { backStackEntry ->
-            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
-            ProcessListScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
         }
 
         composable(
@@ -175,14 +161,6 @@ fun NavGraph() {
         }
 
         composable(
-            route = Screen.LogViewer.route,
-            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
-        ) { backStackEntry ->
-            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
-            LogViewerScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(
             route = Screen.MetricsHistory.route,
             arguments = listOf(navArgument("serverId") { type = NavType.LongType })
         ) { backStackEntry ->
@@ -191,7 +169,9 @@ fun NavGraph() {
         }
 
         composable(Screen.Settings.route) {
-            SettingsScreen(onNavigateBack = { navController.popBackStack() })
+            com.servercontrol.presentation.settings.SettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable(
@@ -199,10 +179,7 @@ fun NavGraph() {
             arguments = listOf(navArgument("serverId") { type = NavType.LongType })
         ) { backStackEntry ->
             val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
-            TerminalScreen(
-                serverId = serverId,
-                onNavigateBack = { navController.popBackStack() }
-            )
+            TerminalScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
         }
 
         composable(
@@ -215,14 +192,6 @@ fun NavGraph() {
                 onNavigateBack = { navController.popBackStack() },
                 onAgentConfigured = { navController.popBackStack() }
             )
-        }
-
-        composable(
-            route = Screen.Docker.route,
-            arguments = listOf(navArgument("serverId") { type = NavType.LongType })
-        ) { backStackEntry ->
-            val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
-            DockerScreen(serverId = serverId, onNavigateBack = { navController.popBackStack() })
         }
 
         composable(
@@ -244,7 +213,7 @@ fun NavGraph() {
         composable(Screen.Overview.route) {
             MultiServerOverviewScreen(
                 onNavigateToServer = { serverId ->
-                    navController.navigate(Screen.Dashboard.createRoute(serverId))
+                    navController.navigate(Screen.ServerDetail.createRoute(serverId))
                 },
                 onNavigateBack = { navController.popBackStack() }
             )
@@ -260,8 +229,7 @@ fun NavGraph() {
 
         composable(Screen.QrScan.route) {
             QrScanScreen(
-                onServerScanned = { profile ->
-                    // Navigate to AddServerScreen with pre-filled data handled via ViewModel
+                onServerScanned = { _ ->
                     navController.navigate(Screen.AddServer.createRoute()) {
                         launchSingleTop = true
                     }

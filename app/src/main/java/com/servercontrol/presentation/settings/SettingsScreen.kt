@@ -1,7 +1,11 @@
 package com.servercontrol.presentation.settings
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -9,10 +13,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.servercontrol.BuildConfig
+import com.servercontrol.presentation.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,276 +30,226 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     var showRefreshDialog by remember { mutableStateOf(false) }
-    var webhookTestResult by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = {
+                    Text(
+                        "Settings",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // --- Appearance ---
+            // Profile card
             item {
-                SettingsSectionHeader("Appearance")
+                ProfileCard()
             }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.DarkMode,
-                    title = "Dark Theme",
-                    subtitle = "Use dark color scheme",
-                    trailing = {
-                        Switch(
-                            checked = state.isDarkTheme,
-                            onCheckedChange = viewModel::setDarkTheme
-                        )
-                    }
-                )
-            }
-            item { HorizontalDivider() }
 
-            // --- Monitoring ---
-            item { SettingsSectionHeader("Monitoring") }
+            // Account section
             item {
-                SettingsItem(
-                    icon = Icons.Default.Timer,
-                    title = "Default Refresh Interval",
-                    subtitle = "Currently: ${state.refreshInterval}s",
-                    onClick = { showRefreshDialog = true },
-                    trailing = {
-                        Text(
-                            text = "${state.refreshInterval}s",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
+                SettingsSection(
+                    label = "ACCOUNT",
+                    items = listOf(
+                        SettingRowData(
+                            icon = Icons.Filled.Notifications,
+                            title = "Alert Notifications",
+                            trailing = {
+                                Switch(
+                                    checked = state.backgroundMonitoringEnabled,
+                                    onCheckedChange = viewModel::setBackgroundMonitoringEnabled,
+                                    colors = SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedTrackColor = SC4
+                                    )
+                                )
+                            }
+                        ),
+                        SettingRowData(
+                            icon = Icons.Filled.QrCode2,
+                            title = "QR Transfer",
+                            trailingText = "Tap to share",
+                            onClick = {}
                         )
-                    }
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Sync,
-                    title = "Background Monitoring",
-                    subtitle = "Periodic checks even when app is closed",
-                    trailing = {
-                        Switch(
-                            checked = state.backgroundMonitoringEnabled,
-                            onCheckedChange = viewModel::setBackgroundMonitoringEnabled
-                        )
-                    }
-                )
-            }
-            if (state.backgroundMonitoringEnabled) {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "Check every ${state.backgroundMonitoringInterval} minutes",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Slider(
-                            value = state.backgroundMonitoringInterval.toFloat(),
-                            onValueChange = { viewModel.setBackgroundMonitoringInterval(it.toInt()) },
-                            valueRange = 5f..60f,
-                            steps = 10,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-            item { HorizontalDivider() }
-
-            // --- Alerts ---
-            item { SettingsSectionHeader("Alerts") }
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Memory,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("CPU Alert", style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                text = "Notify when CPU exceeds ${state.cpuAlertThreshold}%",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Slider(
-                        value = state.cpuAlertThreshold.toFloat(),
-                        onValueChange = { viewModel.setCpuAlertThreshold(it.toInt()) },
-                        valueRange = 50f..100f,
-                        steps = 9,
-                        modifier = Modifier.fillMaxWidth()
                     )
-                }
+                )
             }
+
+            // Monitoring section
             item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Storage,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                SettingsSection(
+                    label = "MONITORING",
+                    items = listOf(
+                        SettingRowData(
+                            icon = Icons.Filled.Timer,
+                            title = "Refresh Interval",
+                            trailingText = "${state.refreshInterval}s",
+                            onClick = { showRefreshDialog = true }
+                        ),
+                        SettingRowData(
+                            icon = Icons.Filled.Sync,
+                            title = "Background Monitoring",
+                            trailing = {
+                                Switch(
+                                    checked = state.backgroundMonitoringEnabled,
+                                    onCheckedChange = viewModel::setBackgroundMonitoringEnabled,
+                                    colors = SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedTrackColor = SC4
+                                    )
+                                )
+                            }
+                        ),
+                        SettingRowData(
+                            icon = Icons.Filled.Memory,
+                            title = "CPU Alert Threshold",
+                            trailingText = "${state.cpuAlertThreshold}%",
+                            onClick = {}
+                        ),
+                        SettingRowData(
+                            icon = Icons.Filled.Storage,
+                            title = "Disk Alert Threshold",
+                            trailingText = "${state.diskAlertThreshold}%",
+                            onClick = {}
                         )
-                        Spacer(Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Disk Alert", style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                text = "Notify when disk usage exceeds ${state.diskAlertThreshold}%",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Slider(
-                        value = state.diskAlertThreshold.toFloat(),
-                        onValueChange = { viewModel.setDiskAlertThreshold(it.toInt()) },
-                        valueRange = 50f..100f,
-                        steps = 9,
-                        modifier = Modifier.fillMaxWidth()
                     )
-                }
+                )
             }
-            item { HorizontalDivider() }
 
-            // --- Webhook Alerts ---
-            item { SettingsSectionHeader("Webhook Alerts") }
+            // Security section
             item {
-                Column(
+                SettingsSection(
+                    label = "SECURITY",
+                    items = listOf(
+                        SettingRowData(
+                            icon = Icons.Filled.Fingerprint,
+                            title = "Biometric Lock",
+                            trailing = {
+                                Switch(
+                                    checked = false,
+                                    onCheckedChange = {},
+                                    colors = SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedTrackColor = SC4
+                                    )
+                                )
+                            }
+                        ),
+                        SettingRowData(
+                            icon = Icons.Filled.VpnLock,
+                            title = "VPN Detection",
+                            trailing = {
+                                Switch(
+                                    checked = false,
+                                    onCheckedChange = {},
+                                    colors = SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedTrackColor = SC4
+                                    )
+                                )
+                            }
+                        )
+                    )
+                )
+            }
+
+            // App section
+            item {
+                SettingsSection(
+                    label = "APP",
+                    items = listOf(
+                        SettingRowData(
+                            icon = Icons.Filled.Palette,
+                            title = "Dark Theme",
+                            trailing = {
+                                Switch(
+                                    checked = state.isDarkTheme,
+                                    onCheckedChange = viewModel::setDarkTheme,
+                                    colors = SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedTrackColor = SC4
+                                    )
+                                )
+                            }
+                        ),
+                        SettingRowData(
+                            icon = Icons.Filled.Info,
+                            title = "Version",
+                            trailingText = BuildConfig.VERSION_NAME,
+                            onClick = null
+                        ),
+                        SettingRowData(
+                            icon = Icons.Filled.Code,
+                            title = "Open Source Agent",
+                            trailingText = "GitHub",
+                            onClick = {}
+                        )
+                    )
+                )
+            }
+
+            // Footer
+            item {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text("Webhook Type", style = MaterialTheme.typography.bodyLarge)
-                    val webhookTypes = listOf("none" to "None", "slack" to "Slack", "discord" to "Discord", "telegram" to "Telegram")
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        webhookTypes.forEachIndexed { index, (key, label) ->
-                            SegmentedButton(
-                                selected = state.webhookType == key,
-                                onClick = { viewModel.setWebhookType(key) },
-                                shape = SegmentedButtonDefaults.itemShape(index = index, count = webhookTypes.size)
-                            ) { Text(label, maxLines = 1) }
-                        }
-                    }
-
-                    if (state.webhookType == "slack" || state.webhookType == "discord") {
-                        OutlinedTextField(
-                            value = state.webhookUrl,
-                            onValueChange = { viewModel.setWebhookUrl(it) },
-                            label = { Text("Webhook URL") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                    TextButton(onClick = { /* replay onboarding */ }) {
+                        Text(
+                            "Replay onboarding",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 14.sp
                         )
-                    }
-
-                    if (state.webhookType == "telegram") {
-                        OutlinedTextField(
-                            value = state.telegramBotToken,
-                            onValueChange = { viewModel.setTelegramBotToken(it) },
-                            label = { Text("Bot Token") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = state.telegramChatId,
-                            onValueChange = { viewModel.setTelegramChatId(it) },
-                            label = { Text("Chat ID") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    if (state.webhookType != "none") {
-                        Button(
-                            onClick = { webhookTestResult = "Sending test…"; viewModel.sendTestWebhook() },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Test Webhook") }
-
-                        webhookTestResult?.let { msg ->
-                            Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                        }
                     }
                 }
+                Spacer(Modifier.height(24.dp))
             }
-            item { HorizontalDivider() }
-
-            // --- About ---
-            item { SettingsSectionHeader("About") }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Info,
-                    title = "App Version",
-                    subtitle = BuildConfig.VERSION_NAME
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Code,
-                    title = "Open Source Agent",
-                    subtitle = BuildConfig.GITHUB_URL
-                )
-            }
-            item { Spacer(Modifier.height(24.dp)) }
         }
     }
 
-    // Refresh interval dialog
     if (showRefreshDialog) {
         AlertDialog(
             onDismissRequest = { showRefreshDialog = false },
             title = { Text("Refresh Interval") },
             text = {
                 Column {
-                    listOf(2 to "2 seconds", 5 to "5 seconds", 10 to "10 seconds", 30 to "30 seconds").forEach { (secs, label) ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = state.refreshInterval == secs,
-                                onClick = {
-                                    viewModel.setRefreshInterval(secs)
-                                    showRefreshDialog = false
-                                }
-                            )
-                            Text(label)
+                    listOf(2 to "2 seconds", 5 to "5 seconds", 10 to "10 seconds", 30 to "30 seconds")
+                        .forEach { (secs, label) ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = state.refreshInterval == secs,
+                                    onClick = {
+                                        viewModel.setRefreshInterval(secs)
+                                        showRefreshDialog = false
+                                    }
+                                )
+                                Text(label)
+                            }
                         }
-                    }
                 }
             },
             confirmButton = {
@@ -302,49 +260,148 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsSectionHeader(title: String) {
-    Text(
-        text = title,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary
-    )
+private fun ProfileCard() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = CardShape,
+        color = SC2,
+        border = BorderStroke(1.dp, OutlineVariant)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Avatar
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "AD",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Admin",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "admin@servercontrol",
+                    fontFamily = MonoFamily,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                Icons.Filled.QrCode2,
+                contentDescription = "QR",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
 }
 
+private data class SettingRowData(
+    val icon: ImageVector,
+    val title: String,
+    val trailingText: String? = null,
+    val onClick: (() -> Unit)? = null,
+    val trailing: (@Composable () -> Unit)? = null
+)
+
 @Composable
-fun SettingsItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    onClick: (() -> Unit)? = null,
-    trailing: (@Composable () -> Unit)? = null
-) {
-    if (onClick != null) {
-        Surface(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-            SettingsItemContent(icon, title, subtitle, trailing)
+private fun SettingsSection(label: String, items: List<SettingRowData>) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = CardShape,
+            color = SC2,
+            border = BorderStroke(1.dp, OutlineVariant)
+        ) {
+            Column {
+                items.forEachIndexed { index, item ->
+                    SettingRow(item)
+                    if (index < items.size - 1) {
+                        HorizontalDivider(color = OutlineVariant, thickness = 1.dp)
+                    }
+                }
+            }
         }
-    } else {
-        SettingsItemContent(icon, title, subtitle, trailing)
     }
 }
 
 @Composable
-private fun SettingsItemContent(
-    icon: ImageVector,
-    title: String,
-    subtitle: String?,
-    trailing: (@Composable () -> Unit)?
-) {
-    ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = subtitle?.let { { Text(it) } },
-        leadingContent = {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        trailingContent = trailing
-    )
+private fun SettingRow(data: SettingRowData) {
+    if (data.onClick != null) {
+        Surface(
+            onClick = data.onClick,
+            color = SC2,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SettingRowContent(data)
+        }
+    } else {
+        SettingRowContent(data)
+    }
+}
+
+@Composable
+private fun SettingRowContent(data: SettingRowData) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Icon(
+            data.icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp)
+        )
+        Text(
+            data.title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        data.trailing?.invoke() ?: run {
+            data.trailingText?.let { text ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (data.onClick != null) {
+                        Icon(
+                            Icons.Filled.ChevronRight,
+                            null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
