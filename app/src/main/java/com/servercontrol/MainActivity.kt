@@ -22,36 +22,58 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.servercontrol.presentation.navigation.NavGraph
+import com.servercontrol.presentation.settings.SettingsKeys
 import com.servercontrol.presentation.settings.SettingsViewModel
 import com.servercontrol.presentation.theme.ServerControlTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
 
-    private val isAuthenticatedState = mutableStateOf(false)
+    @Inject lateinit var dataStore: DataStore<Preferences>
+
+    private lateinit var isAuthenticatedState: MutableState<Boolean>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         splashScreen.setKeepOnScreenCondition { false }
         enableEdgeToEdge()
+
+        // Read biometric setting before the UI starts to avoid the race where
+        // stateIn's default SettingsUiState(biometricLockEnabled=false) briefly
+        // unlocks the app before DataStore loads the real value.
+        val biometricEnabled = runBlocking {
+            dataStore.data.first()[SettingsKeys.BIOMETRIC_LOCK] ?: false
+        }
+        isAuthenticatedState = mutableStateOf(!biometricEnabled)
+
         setContent {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             val darkTheme by settingsViewModel.darkTheme.collectAsState()
             val settings by settingsViewModel.uiState.collectAsState()
             val isAuthenticated by isAuthenticatedState
 
-            LaunchedEffect(settings.biometricLockEnabled) {
-                if (!settings.biometricLockEnabled) {
-                    isAuthenticatedState.value = true
-                } else if (!isAuthenticatedState.value) {
+            // Prompt whenever lock is enabled and the user isn't yet authenticated.
+            // This also fires when the user toggles the setting ON mid-session.
+            LaunchedEffect(settings.biometricLockEnabled, isAuthenticated) {
+                if (settings.biometricLockEnabled && !isAuthenticated) {
                     showBiometricPrompt()
                 }
             }
+
+            // Always call rememberVpnState unconditionally (Compose rule: no conditional
+            // composable calls). Gate the result on the user's preference instead.
+            val vpnState = rememberVpnState()
+            val vpnActive = settings.vpnDetectionEnabled && vpnState
 
             ServerControlTheme(darkTheme = darkTheme) {
                 Surface(
@@ -59,7 +81,6 @@ class MainActivity : FragmentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     if (!settings.biometricLockEnabled || isAuthenticated) {
-                        val vpnActive = if (settings.vpnDetectionEnabled) rememberVpnState() else false
                         Column(modifier = Modifier.fillMaxSize()) {
                             if (vpnActive) {
                                 VpnWarningBanner()
@@ -76,6 +97,17 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        // Re-lock when the app leaves the foreground so the next open requires auth.
+        val biometricEnabled = runBlocking {
+            dataStore.data.first()[SettingsKeys.BIOMETRIC_LOCK] ?: false
+        }
+        if (biometricEnabled) {
+            isAuthenticatedState.value = false
+        }
+    }
+
     private fun showBiometricPrompt() {
         val executor = ContextCompat.getMainExecutor(this)
         val prompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
@@ -84,6 +116,7 @@ class MainActivity : FragmentActivity() {
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                // Keep locked — user dismissed or no biometric enrolled
                 isAuthenticatedState.value = false
             }
         })

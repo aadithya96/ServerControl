@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.servercontrol.domain.model.SystemStats
+import com.servercontrol.domain.repository.StatsRepository
 import com.servercontrol.domain.usecase.GetSystemStatsUseCase
 import com.servercontrol.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val getSystemStatsUseCase: GetSystemStatsUseCase,
+    private val statsRepository: StatsRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -112,6 +114,25 @@ class DashboardViewModel @Inject constructor(
             }
             is Resource.Loading -> Unit
         }
+
+        if (effectiveServerId != -1L) {
+            when (val bw = statsRepository.getBandwidth(effectiveServerId)) {
+                is Resource.Success -> {
+                    val ifaces = bw.data
+                    val totalRx = ifaces.sumOf { it.rxBytesPerSec }
+                    val totalTx = ifaces.sumOf { it.txBytesPerSec }
+                    val newNetHistory = (_uiState.value.networkHistory + (totalRx to totalTx)).takeLast(30)
+                    _uiState.update { state ->
+                        state.copy(
+                            rxBytesPerSec = totalRx,
+                            txBytesPerSec = totalTx,
+                            networkHistory = newNetHistory
+                        )
+                    }
+                }
+                else -> Unit
+            }
+        }
     }
 
     override fun onCleared() {
@@ -125,5 +146,8 @@ data class DashboardUiState(
     val cpuHistory: List<Float> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val refreshIntervalSeconds: Int = 5
+    val refreshIntervalSeconds: Int = 5,
+    val rxBytesPerSec: Long = 0L,
+    val txBytesPerSec: Long = 0L,
+    val networkHistory: List<Pair<Long, Long>> = emptyList()
 )
