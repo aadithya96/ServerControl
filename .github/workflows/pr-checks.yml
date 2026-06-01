@@ -20,42 +20,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6.0.2
 
-      - name: Cache ktlint
-        id: cache-ktlint
-        uses: actions/cache@v5.0.5
-        with:
-          path: ktlint
-          key: ktlint-1.1.1
-
-      - name: Download ktlint
-        if: steps.cache-ktlint.outputs.cache-hit != 'true'
+      - name: Install ktlint (cached on runner disk)
         run: |
-          curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.1.1/ktlint
-          chmod +x ktlint
-
-      - name: Ensure ktlint is executable
-        run: chmod +x ktlint
+          KTLINT_BIN="$HOME/.local/bin/ktlint"
+          if [ ! -f "$KTLINT_BIN" ]; then
+            mkdir -p "$HOME/.local/bin"
+            curl -sSLo "$KTLINT_BIN" https://github.com/pinterest/ktlint/releases/download/1.1.1/ktlint
+          fi
+          chmod +x "$KTLINT_BIN"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Run ktlint
         run: |
           mkdir -p build
-          ./ktlint --reporter=checkstyle,output=build/ktlint-report.xml 'app/src/**/*.kt' || true
+          ktlint --reporter=checkstyle,output=build/ktlint-report.xml 'app/src/**/*.kt' || true
 
       - name: Set up Java 17
         uses: actions/setup-java@v5.2.0
         with:
           java-version: '17'
           distribution: 'temurin'
-
-      - name: Cache Gradle
-        uses: actions/cache@v5.0.5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
-          restore-keys: |
-            gradle-
 
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -88,16 +72,6 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Cache Gradle
-        uses: actions/cache@v5.0.5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
-          restore-keys: |
-            gradle-
-
       - name: Make gradlew executable
         run: chmod +x gradlew
 
@@ -129,16 +103,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-
-      - name: Cache Gradle
-        uses: actions/cache@v5.0.5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
-          restore-keys: |
-            gradle-
 
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -215,16 +179,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-
-      - name: Cache Gradle
-        uses: actions/cache@v5.0.5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
-          restore-keys: |
-            gradle-
 
       - name: Make gradlew executable
         run: chmod +x gradlew
