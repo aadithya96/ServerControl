@@ -128,7 +128,7 @@ class AgentInstallerViewModel @Inject constructor(
                 try {
                     val channel = session.openChannel("exec") as ChannelExec
                     channel.setCommand(
-                        "curl -sSL https://raw.githubusercontent.com/aadithya96/servercontrol/main/agent/install.sh | sudo bash 2>&1"
+                        "curl -sSL https://raw.githubusercontent.com/aadithya96/ServerControl/main/agent/install.sh | sudo bash 2>&1"
                     )
                     channel.setPty(true)
                     val inputStream = channel.inputStream

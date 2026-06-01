@@ -254,15 +254,24 @@ fun AgentInstallerScreen(
                         currentState.isComplete
 
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (!isComplete) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Color(0xFF4CAF50),
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                         Text(
-                            if (isComplete) "Installation complete" else "Installing...",
-                            style = MaterialTheme.typography.titleSmall
+                            if (isComplete) "Installation complete" else "Installing…",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (isComplete) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -368,21 +377,24 @@ fun AgentInstallerScreen(
                             containerColor = MaterialTheme.colorScheme.errorContainer
                         )
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Icon(
                                 Icons.Default.Error,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                             Text(
                                 currentState.message,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }

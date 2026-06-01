@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.servercontrol.domain.model.AuthType
 import com.servercontrol.domain.model.ServerProfile
+import com.servercontrol.presentation.servers.ServerMetrics
 import com.servercontrol.presentation.components.Meter
 import com.servercontrol.presentation.components.ServerStatus
 import com.servercontrol.presentation.components.StatusChip
@@ -53,6 +54,7 @@ fun ServerListScreen(
 ) {
     val servers by viewModel.servers.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val serverMetrics by viewModel.serverMetrics.collectAsState()
     var serverToDelete by remember { mutableStateOf<ServerProfile?>(null) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -228,6 +230,7 @@ fun ServerListScreen(
             items(servers, key = { it.id }) { server ->
                 ServerCard(
                     server = server,
+                    metrics = serverMetrics[server.id],
                     onClick = {
                         if (server.isOnline) {
                             viewModel.selectServer(server.id)
@@ -268,6 +271,7 @@ fun ServerListScreen(
 @Composable
 private fun ServerCard(
     server: ServerProfile,
+    metrics: ServerMetrics?,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onOpenTerminal: () -> Unit = {},
@@ -407,7 +411,7 @@ private fun ServerCard(
             // Metric strip or offline row
             HorizontalDivider(color = OutlineVariant, thickness = 1.dp)
             if (server.isOnline) {
-                MetricStrip()
+                MetricStrip(metrics = metrics)
             } else {
                 OfflineRow()
             }
@@ -416,18 +420,16 @@ private fun ServerCard(
 }
 
 @Composable
-private fun MetricStrip() {
-    // Metrics are fetched per-server in real usage; show layout with 0 values here
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 0.dp),
-    ) {
-        MetricColumn(label = "CPU", value = "—", fillFraction = 0f, modifier = Modifier.weight(1f))
+private fun MetricStrip(metrics: ServerMetrics?) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        val cpuValue = metrics?.let { "${"%.0f".format(it.cpu)}%" } ?: "—"
+        val memValue = metrics?.let { "${"%.0f".format(it.mem)}%" } ?: "—"
+        val diskValue = metrics?.let { "${"%.0f".format(it.disk)}%" } ?: "—"
+        MetricColumn(label = "CPU",  value = cpuValue,  fillFraction = (metrics?.cpu ?: 0f) / 100f, modifier = Modifier.weight(1f))
         Box(modifier = Modifier.width(1.dp).height(48.dp).background(OutlineVariant))
-        MetricColumn(label = "MEM", value = "—", fillFraction = 0f, modifier = Modifier.weight(1f))
+        MetricColumn(label = "MEM",  value = memValue,  fillFraction = (metrics?.mem ?: 0f) / 100f, modifier = Modifier.weight(1f))
         Box(modifier = Modifier.width(1.dp).height(48.dp).background(OutlineVariant))
-        MetricColumn(label = "DISK", value = "—", fillFraction = 0f, modifier = Modifier.weight(1f))
+        MetricColumn(label = "DISK", value = diskValue, fillFraction = (metrics?.disk ?: 0f) / 100f, modifier = Modifier.weight(1f))
     }
 }
 

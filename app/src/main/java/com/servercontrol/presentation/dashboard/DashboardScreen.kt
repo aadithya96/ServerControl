@@ -60,6 +60,8 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsState()
     val cpuHistory by viewModel.cpuHistory.collectAsState()
 
+    var showOverflow by remember { mutableStateOf(false) }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -79,8 +81,45 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* overflow */ }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "More")
+                    Box {
+                        IconButton(onClick = { showOverflow = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "More")
+                        }
+                        DropdownMenu(
+                            expanded = showOverflow,
+                            onDismissRequest = { showOverflow = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Terminal") },
+                                onClick = { showOverflow = false; onNavigateToTerminal() },
+                                leadingIcon = { Icon(Icons.Filled.Terminal, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Processes") },
+                                onClick = { showOverflow = false; onNavigateToProcesses() },
+                                leadingIcon = { Icon(Icons.Filled.Memory, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Services") },
+                                onClick = { showOverflow = false; onNavigateToServices() },
+                                leadingIcon = { Icon(Icons.Filled.Dns, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Metrics History") },
+                                onClick = { showOverflow = false; onNavigateToMetricsHistory() },
+                                leadingIcon = { Icon(Icons.Filled.ShowChart, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Quick Commands") },
+                                onClick = { showOverflow = false; onNavigateToQuickCommands() },
+                                leadingIcon = { Icon(Icons.Filled.Code, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Agent Installer") },
+                                onClick = { showOverflow = false; onNavigateToAgentInstaller() },
+                                leadingIcon = { Icon(Icons.Filled.Download, null) }
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

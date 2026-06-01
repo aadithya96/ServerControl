@@ -11,7 +11,7 @@ BINARY_NAME="servercontrol-agent"
 CONFIG_DIR="/etc/servercontrol"
 CONFIG_FILE="$CONFIG_DIR/agent.conf"
 SERVICE_FILE="/etc/systemd/system/servercontrol.service"
-GITHUB_REPO="servercontrol/agent"
+GITHUB_REPO="aadithya96/ServerControl"
 DEFAULT_PORT="9876"
 
 RED='\033[0;31m'
@@ -69,28 +69,44 @@ log_info "Installing ServerControl Agent v$AGENT_VERSION..."
 
 BINARY_PATH="$INSTALL_DIR/$BINARY_NAME"
 
-if command -v go &>/dev/null; then
-    log_info "Building from source using local Go toolchain..."
-    TMP_BUILD=$(mktemp -d)
-    trap "rm -rf $TMP_BUILD" EXIT
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-    # If we're running from the installer directory (development mode)
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    if [[ -f "$SCRIPT_DIR/main.go" ]]; then
-        log_info "Building from $SCRIPT_DIR"
-        cd "$SCRIPT_DIR"
-        go build -ldflags="-s -w" -o "$BINARY_PATH" .
-    else
-        log_warn "Source not found locally. Please build manually and place at $BINARY_PATH"
+if [[ -f "$SCRIPT_DIR/main.go" ]]; then
+    # Running from inside the cloned repo — build directly
+    if ! command -v go &>/dev/null; then
+        log_error "Go toolchain not found. Install Go 1.21+ and retry."
         exit 1
     fi
-elif [[ -n "$GOARCH" ]]; then
-    DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v$AGENT_VERSION/servercontrol-agent-linux-$GOARCH"
-    log_info "Downloading binary from $DOWNLOAD_URL..."
-    curl -fsSL "$DOWNLOAD_URL" -o "$BINARY_PATH"
+    log_info "Building from local source at $SCRIPT_DIR..."
+    cd "$SCRIPT_DIR"
+    go build -ldflags="-s -w" -o "$BINARY_PATH" .
 else
-    log_error "Cannot install: Go not found and architecture not recognized."
-    exit 1
+    # Running via remote pipe — clone repo and build
+    TMP_BUILD=$(mktemp -d)
+    trap "rm -rf '$TMP_BUILD'" EXIT
+
+    if command -v go &>/dev/null; then
+        log_info "Cloning source from GitHub and building..."
+        if command -v git &>/dev/null; then
+            git clone --depth 1 "https://github.com/$GITHUB_REPO.git" "$TMP_BUILD/src" 2>&1
+        else
+            log_error "git not found. Please install git and retry."
+            exit 1
+        fi
+        cd "$TMP_BUILD/src/agent"
+        go build -ldflags="-s -w" -o "$BINARY_PATH" .
+    elif [[ -n "$GOARCH" ]]; then
+        # Fallback: try pre-built binary from GitHub Releases
+        DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v$AGENT_VERSION/servercontrol-agent-linux-$GOARCH"
+        log_info "Go not found. Downloading pre-built binary from $DOWNLOAD_URL..."
+        if ! curl -fsSL "$DOWNLOAD_URL" -o "$BINARY_PATH" 2>/dev/null; then
+            log_error "Download failed. Install Go 1.21+ or provide a pre-built binary at $BINARY_PATH"
+            exit 1
+        fi
+    else
+        log_error "Cannot install: Go not found and architecture not recognised."
+        exit 1
+    fi
 fi
 
 chmod +x "$BINARY_PATH"

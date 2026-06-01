@@ -25,10 +25,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.servercontrol.presentation.dashboard.DashboardScreen
 import com.servercontrol.presentation.docker.DockerScreen
 import com.servercontrol.presentation.logs.LogViewerScreen
@@ -67,10 +69,12 @@ fun ServerDetailContainer(
 ) {
     val innerNav = rememberNavController()
     val backEntry by innerNav.currentBackStackEntryAsState()
-    val currentRoute = backEntry?.destination?.route ?: "monitor"
+    // currentTab is the route prefix without the "/{serverId}" suffix
+    val currentTab = backEntry?.destination?.route?.substringBefore("/") ?: "monitor"
 
-    fun switchTab(route: String) {
-        innerNav.navigate(route) {
+    fun switchTab(tabRoute: String) {
+        val dest = if (tabRoute == "settings") tabRoute else "$tabRoute/$serverId"
+        innerNav.navigate(dest) {
             popUpTo(innerNav.graph.findStartDestination().id) { saveState = true }
             launchSingleTop = true
             restoreState = true
@@ -81,7 +85,7 @@ fun ServerDetailContainer(
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                 tabs.forEach { tab ->
-                    val selected = currentRoute == tab.route
+                    val selected = currentTab == tab.route
                     NavigationBarItem(
                         selected = selected,
                         onClick = { switchTab(tab.route) },
@@ -110,14 +114,16 @@ fun ServerDetailContainer(
             }
         }
     ) { innerPadding ->
+        val serverIdArg = listOf(navArgument("serverId") { type = NavType.LongType })
         NavHost(
             navController = innerNav,
-            startDestination = "monitor",
+            startDestination = "monitor/$serverId",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("monitor") {
+            composable("monitor/{serverId}", arguments = serverIdArg) { back ->
+                val id = back.arguments?.getLong("serverId") ?: serverId
                 DashboardScreen(
-                    serverId = serverId,
+                    serverId = id,
                     onNavigateBack = onNavigateBack,
                     onNavigateToProcesses = { switchTab("processes") },
                     onNavigateToDisk = onNavigateToDisk,
@@ -133,21 +139,24 @@ fun ServerDetailContainer(
                     onNavigateToSecurity = onNavigateToSecurity
                 )
             }
-            composable("processes") {
+            composable("processes/{serverId}", arguments = serverIdArg) { back ->
+                val id = back.arguments?.getLong("serverId") ?: serverId
                 ProcessListScreen(
-                    serverId = serverId,
+                    serverId = id,
                     onNavigateBack = { switchTab("monitor") }
                 )
             }
-            composable("containers") {
+            composable("containers/{serverId}", arguments = serverIdArg) { back ->
+                val id = back.arguments?.getLong("serverId") ?: serverId
                 DockerScreen(
-                    serverId = serverId,
+                    serverId = id,
                     onNavigateBack = { switchTab("monitor") }
                 )
             }
-            composable("logs") {
+            composable("logs/{serverId}", arguments = serverIdArg) { back ->
+                val id = back.arguments?.getLong("serverId") ?: serverId
                 LogViewerScreen(
-                    serverId = serverId,
+                    serverId = id,
                     onNavigateBack = { switchTab("monitor") }
                 )
             }
