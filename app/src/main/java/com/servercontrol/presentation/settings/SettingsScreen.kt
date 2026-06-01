@@ -1,5 +1,9 @@
 package com.servercontrol.presentation.settings
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,12 +11,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -34,6 +42,10 @@ fun SettingsScreen(
     var showRefreshDialog by remember { mutableStateOf(false) }
     var showCpuAlertDialog by remember { mutableStateOf(false) }
     var showDiskAlertDialog by remember { mutableStateOf(false) }
+
+    val notifPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> viewModel.setAlertNotificationsEnabled(granted) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -66,7 +78,11 @@ fun SettingsScreen(
         ) {
             // Profile card
             item {
-                ProfileCard(onQrClick = onQrTransfer)
+                ProfileCard(
+                    displayName = state.profileDisplayName,
+                    onDisplayNameChange = viewModel::setProfileDisplayName,
+                    onQrClick = onQrTransfer
+                )
             }
 
             // Account section
@@ -80,7 +96,13 @@ fun SettingsScreen(
                             trailing = {
                                 Switch(
                                     checked = state.alertNotificationsEnabled,
-                                    onCheckedChange = viewModel::setAlertNotificationsEnabled,
+                                    onCheckedChange = { enabled ->
+                                        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        } else {
+                                            viewModel.setAlertNotificationsEnabled(enabled)
+                                        }
+                                    },
                                     colors = SwitchDefaults.colors(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary,
                                         uncheckedTrackColor = SC4
@@ -237,27 +259,33 @@ fun SettingsScreen(
             onDismissRequest = { showRefreshDialog = false },
             title = { Text("Refresh Interval") },
             text = {
-                Column {
-                    listOf(2 to "2 seconds", 5 to "5 seconds", 10 to "10 seconds", 30 to "30 seconds")
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(2 to "2 s", 5 to "5 s", 10 to "10 s", 30 to "30 s")
                         .forEach { (secs, label) ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                            val selected = state.refreshInterval == secs
+                            Surface(
+                                onClick = { viewModel.setRefreshInterval(secs); showRefreshDialog = false },
+                                shape = MaterialTheme.shapes.medium,
+                                color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (selected) MaterialTheme.colorScheme.secondary else OutlineVariant
+                                ),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                RadioButton(
-                                    selected = state.refreshInterval == secs,
-                                    onClick = {
-                                        viewModel.setRefreshInterval(secs)
-                                        showRefreshDialog = false
-                                    }
+                                Text(
+                                    label,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                    color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                                            else MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
                                 )
-                                Text(label)
                             }
                         }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showRefreshDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showRefreshDialog = false }) { Text("Close") }
             }
         )
     }
@@ -267,26 +295,32 @@ fun SettingsScreen(
             onDismissRequest = { showCpuAlertDialog = false },
             title = { Text("CPU Alert Threshold") },
             text = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(50, 70, 80, 90).forEach { pct ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                        val selected = state.cpuAlertThreshold == pct
+                        Surface(
+                            onClick = { viewModel.setCpuAlertThreshold(pct); showCpuAlertDialog = false },
+                            shape = MaterialTheme.shapes.medium,
+                            color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(
+                                1.dp,
+                                if (selected) MaterialTheme.colorScheme.secondary else OutlineVariant
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            RadioButton(
-                                selected = state.cpuAlertThreshold == pct,
-                                onClick = {
-                                    viewModel.setCpuAlertThreshold(pct)
-                                    showCpuAlertDialog = false
-                                }
+                            Text(
+                                "$pct%",
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                                        else MaterialTheme.colorScheme.onSurface,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
                             )
-                            Text("$pct%")
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showCpuAlertDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showCpuAlertDialog = false }) { Text("Close") }
             }
         )
     }
@@ -296,33 +330,48 @@ fun SettingsScreen(
             onDismissRequest = { showDiskAlertDialog = false },
             title = { Text("Disk Alert Threshold") },
             text = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(70, 80, 90, 95).forEach { pct ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                        val selected = state.diskAlertThreshold == pct
+                        Surface(
+                            onClick = { viewModel.setDiskAlertThreshold(pct); showDiskAlertDialog = false },
+                            shape = MaterialTheme.shapes.medium,
+                            color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(
+                                1.dp,
+                                if (selected) MaterialTheme.colorScheme.secondary else OutlineVariant
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            RadioButton(
-                                selected = state.diskAlertThreshold == pct,
-                                onClick = {
-                                    viewModel.setDiskAlertThreshold(pct)
-                                    showDiskAlertDialog = false
-                                }
+                            Text(
+                                "$pct%",
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                                        else MaterialTheme.colorScheme.onSurface,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
                             )
-                            Text("$pct%")
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showDiskAlertDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDiskAlertDialog = false }) { Text("Close") }
             }
         )
     }
 }
 
 @Composable
-private fun ProfileCard(onQrClick: () -> Unit = {}) {
+private fun ProfileCard(
+    displayName: String,
+    onDisplayNameChange: (String) -> Unit,
+    onQrClick: () -> Unit = {}
+) {
+    val focusManager = LocalFocusManager.current
+    val initials = displayName.trim().split(" ").mapNotNull { it.firstOrNull()?.uppercaseChar() }
+        .take(2).joinToString("")
+        .ifBlank { "SC" }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
@@ -334,7 +383,6 @@ private fun ProfileCard(onQrClick: () -> Unit = {}) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Avatar
             Box(
                 modifier = Modifier
                     .size(52.dp)
@@ -343,25 +391,21 @@ private fun ProfileCard(onQrClick: () -> Unit = {}) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "AD",
+                    initials,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Admin",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    "admin@servercontrol",
-                    fontFamily = MonoFamily,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            OutlinedTextField(
+                value = displayName,
+                onValueChange = onDisplayNameChange,
+                label = { Text("Display name") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+            )
             Icon(
                 Icons.Filled.QrCode2,
                 contentDescription = "QR",

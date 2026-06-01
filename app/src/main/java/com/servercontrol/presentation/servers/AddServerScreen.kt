@@ -10,6 +10,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -254,29 +256,44 @@ fun AddServerScreen(
                 }
             }
 
-            // Test connection result
+            // Test connection result (only show outcome, not a duplicate loading indicator)
             when (val ts = testState) {
-                is Resource.Loading -> {
+                is Resource.Loading -> Unit
+                is Resource.Success -> {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                        Text("Testing connection...", style = MaterialTheme.typography.bodySmall)
+                        Icon(
+                            Icons.Filled.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            "Connected in ${ts.data}ms",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
-                is Resource.Success -> {
-                    SuggestionChip(
-                        onClick = {},
-                        label = { Text("Connected in ${ts.data}ms", color = MaterialTheme.colorScheme.primary) }
-                    )
-                }
                 is Resource.Error -> {
-                    Text(
-                        text = "Error: ${ts.message}",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.Error,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            "Error: ${ts.message}",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
                 null -> Unit
             }

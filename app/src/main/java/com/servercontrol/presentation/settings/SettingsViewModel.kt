@@ -34,6 +34,7 @@ object SettingsKeys {
     val ALERT_NOTIFICATIONS = booleanPreferencesKey("alert_notifications")
     val BIOMETRIC_LOCK = booleanPreferencesKey("biometric_lock")
     val VPN_DETECTION = booleanPreferencesKey("vpn_detection")
+    val PROFILE_DISPLAY_NAME = stringPreferencesKey("profile_display_name")
 }
 
 data class SettingsUiState(
@@ -50,7 +51,8 @@ data class SettingsUiState(
     val telegramChatId: String = "",
     val alertNotificationsEnabled: Boolean = true,
     val biometricLockEnabled: Boolean = false,
-    val vpnDetectionEnabled: Boolean = false
+    val vpnDetectionEnabled: Boolean = false,
+    val profileDisplayName: String = "Admin"
 )
 
 @HiltViewModel
@@ -74,7 +76,8 @@ class SettingsViewModel @Inject constructor(
             telegramChatId = prefs[SettingsKeys.TELEGRAM_CHAT_ID] ?: "",
             alertNotificationsEnabled = prefs[SettingsKeys.ALERT_NOTIFICATIONS] ?: true,
             biometricLockEnabled = prefs[SettingsKeys.BIOMETRIC_LOCK] ?: false,
-            vpnDetectionEnabled = prefs[SettingsKeys.VPN_DETECTION] ?: false
+            vpnDetectionEnabled = prefs[SettingsKeys.VPN_DETECTION] ?: false,
+            profileDisplayName = prefs[SettingsKeys.PROFILE_DISPLAY_NAME] ?: "Admin"
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
 
@@ -108,6 +111,7 @@ class SettingsViewModel @Inject constructor(
     fun setAlertNotificationsEnabled(enabled: Boolean) = save { it[SettingsKeys.ALERT_NOTIFICATIONS] = enabled }
     fun setBiometricLockEnabled(enabled: Boolean) = save { it[SettingsKeys.BIOMETRIC_LOCK] = enabled }
     fun setVpnDetectionEnabled(enabled: Boolean) = save { it[SettingsKeys.VPN_DETECTION] = enabled }
+    fun setProfileDisplayName(name: String) = save { it[SettingsKeys.PROFILE_DISPLAY_NAME] = name }
     fun setWebhookType(type: String) = save { it[SettingsKeys.WEBHOOK_TYPE] = type }
     fun setWebhookUrl(url: String) = save { it[SettingsKeys.WEBHOOK_URL] = url }
     fun setTelegramBotToken(token: String) = save { it[SettingsKeys.TELEGRAM_BOT_TOKEN] = token }
