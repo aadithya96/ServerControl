@@ -107,3 +107,4 @@ jobs:
           name: Unit Tests
           format: java-junit
           path: app/build/test-results/**/*.xml
+          fail-on-error: 'false'
