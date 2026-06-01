@@ -7,7 +7,7 @@ on:
 
 jobs:
   release-android:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 30
 
     steps:
@@ -52,7 +52,7 @@ jobs:
           generate_release_notes: true
 
   release-agent:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 20
 
     steps:
@@ -86,7 +86,7 @@ jobs:
           generate_release_notes: true
 
   update-install-script:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: release-agent
     timeout-minutes: 10
 
