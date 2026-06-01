@@ -65,6 +65,7 @@ jobs:
     permissions:
       checks: write
       contents: read
+      actions: read
 
     steps:
       - name: Checkout code
@@ -90,7 +91,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run unit tests
-        run: ./gradlew test --no-daemon --parallel --build-cache --stacktrace
+        run: ./gradlew testDebugUnitTest --no-daemon --parallel --build-cache --stacktrace
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
