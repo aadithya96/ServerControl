@@ -31,6 +31,9 @@ object SettingsKeys {
     val WEBHOOK_URL = stringPreferencesKey("webhook_url")
     val TELEGRAM_BOT_TOKEN = stringPreferencesKey("telegram_bot_token")
     val TELEGRAM_CHAT_ID = stringPreferencesKey("telegram_chat_id")
+    val ALERT_NOTIFICATIONS = booleanPreferencesKey("alert_notifications")
+    val BIOMETRIC_LOCK = booleanPreferencesKey("biometric_lock")
+    val VPN_DETECTION = booleanPreferencesKey("vpn_detection")
 }
 
 data class SettingsUiState(
@@ -44,7 +47,10 @@ data class SettingsUiState(
     val webhookType: String = "none",
     val webhookUrl: String = "",
     val telegramBotToken: String = "",
-    val telegramChatId: String = ""
+    val telegramChatId: String = "",
+    val alertNotificationsEnabled: Boolean = true,
+    val biometricLockEnabled: Boolean = false,
+    val vpnDetectionEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -65,7 +71,10 @@ class SettingsViewModel @Inject constructor(
             webhookType = prefs[SettingsKeys.WEBHOOK_TYPE] ?: "none",
             webhookUrl = prefs[SettingsKeys.WEBHOOK_URL] ?: "",
             telegramBotToken = prefs[SettingsKeys.TELEGRAM_BOT_TOKEN] ?: "",
-            telegramChatId = prefs[SettingsKeys.TELEGRAM_CHAT_ID] ?: ""
+            telegramChatId = prefs[SettingsKeys.TELEGRAM_CHAT_ID] ?: "",
+            alertNotificationsEnabled = prefs[SettingsKeys.ALERT_NOTIFICATIONS] ?: true,
+            biometricLockEnabled = prefs[SettingsKeys.BIOMETRIC_LOCK] ?: false,
+            vpnDetectionEnabled = prefs[SettingsKeys.VPN_DETECTION] ?: false
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
 
@@ -96,6 +105,9 @@ class SettingsViewModel @Inject constructor(
     fun setBackgroundMonitoringEnabled(enabled: Boolean) = save { it[SettingsKeys.BG_MONITORING] = enabled }
     fun setBackgroundMonitoringInterval(minutes: Int) = save { it[SettingsKeys.BG_INTERVAL] = minutes }
     fun setOnboardingDone(done: Boolean) = save { it[SettingsKeys.ONBOARDING_DONE] = done }
+    fun setAlertNotificationsEnabled(enabled: Boolean) = save { it[SettingsKeys.ALERT_NOTIFICATIONS] = enabled }
+    fun setBiometricLockEnabled(enabled: Boolean) = save { it[SettingsKeys.BIOMETRIC_LOCK] = enabled }
+    fun setVpnDetectionEnabled(enabled: Boolean) = save { it[SettingsKeys.VPN_DETECTION] = enabled }
     fun setWebhookType(type: String) = save { it[SettingsKeys.WEBHOOK_TYPE] = type }
     fun setWebhookUrl(url: String) = save { it[SettingsKeys.WEBHOOK_URL] = url }
     fun setTelegramBotToken(token: String) = save { it[SettingsKeys.TELEGRAM_BOT_TOKEN] = token }

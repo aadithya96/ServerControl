@@ -32,6 +32,8 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     var showRefreshDialog by remember { mutableStateOf(false) }
+    var showCpuAlertDialog by remember { mutableStateOf(false) }
+    var showDiskAlertDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -77,8 +79,8 @@ fun SettingsScreen(
                             title = "Alert Notifications",
                             trailing = {
                                 Switch(
-                                    checked = state.backgroundMonitoringEnabled,
-                                    onCheckedChange = viewModel::setBackgroundMonitoringEnabled,
+                                    checked = state.alertNotificationsEnabled,
+                                    onCheckedChange = viewModel::setAlertNotificationsEnabled,
                                     colors = SwitchDefaults.colors(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary,
                                         uncheckedTrackColor = SC4
@@ -125,13 +127,13 @@ fun SettingsScreen(
                             icon = Icons.Filled.Memory,
                             title = "CPU Alert Threshold",
                             trailingText = "${state.cpuAlertThreshold}%",
-                            onClick = {}
+                            onClick = { showCpuAlertDialog = true }
                         ),
                         SettingRowData(
                             icon = Icons.Filled.Storage,
                             title = "Disk Alert Threshold",
                             trailingText = "${state.diskAlertThreshold}%",
-                            onClick = {}
+                            onClick = { showDiskAlertDialog = true }
                         )
                     )
                 )
@@ -147,8 +149,8 @@ fun SettingsScreen(
                             title = "Biometric Lock",
                             trailing = {
                                 Switch(
-                                    checked = false,
-                                    onCheckedChange = {},
+                                    checked = state.biometricLockEnabled,
+                                    onCheckedChange = viewModel::setBiometricLockEnabled,
                                     colors = SwitchDefaults.colors(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary,
                                         uncheckedTrackColor = SC4
@@ -161,8 +163,8 @@ fun SettingsScreen(
                             title = "VPN Detection",
                             trailing = {
                                 Switch(
-                                    checked = false,
-                                    onCheckedChange = {},
+                                    checked = state.vpnDetectionEnabled,
+                                    onCheckedChange = viewModel::setVpnDetectionEnabled,
                                     colors = SwitchDefaults.colors(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary,
                                         uncheckedTrackColor = SC4
@@ -256,6 +258,64 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showRefreshDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showCpuAlertDialog) {
+        AlertDialog(
+            onDismissRequest = { showCpuAlertDialog = false },
+            title = { Text("CPU Alert Threshold") },
+            text = {
+                Column {
+                    listOf(50, 70, 80, 90).forEach { pct ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = state.cpuAlertThreshold == pct,
+                                onClick = {
+                                    viewModel.setCpuAlertThreshold(pct)
+                                    showCpuAlertDialog = false
+                                }
+                            )
+                            Text("$pct%")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCpuAlertDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showDiskAlertDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiskAlertDialog = false },
+            title = { Text("Disk Alert Threshold") },
+            text = {
+                Column {
+                    listOf(70, 80, 90, 95).forEach { pct ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = state.diskAlertThreshold == pct,
+                                onClick = {
+                                    viewModel.setDiskAlertThreshold(pct)
+                                    showDiskAlertDialog = false
+                                }
+                            )
+                            Text("$pct%")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDiskAlertDialog = false }) { Text("Cancel") }
             }
         )
     }
