@@ -1,0 +1,29 @@
+name: Runner Maintenance
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Sundays at 3am
+  workflow_dispatch:
+
+jobs:
+  clean-caches:
+    runs-on: self-hosted
+    timeout-minutes: 10
+
+    steps:
+      - name: Clean Gradle dependency cache (files unused for 30+ days)
+        run: |
+          find ~/.gradle/caches -mtime +30 -type f -delete
+          find ~/.gradle/caches -type d -empty -delete
+
+      - name: Clean old Gradle wrapper distributions (unused for 60+ days)
+        run: |
+          find ~/.gradle/wrapper/dists -mtime +60 -type f -delete
+          find ~/.gradle/wrapper/dists -type d -empty -delete
+
+      - name: Report disk usage
+        run: |
+          echo "=== ~/.gradle after cleanup ==="
+          du -sh ~/.gradle/* 2>/dev/null || echo "(empty)"
+          echo "=== Runner disk free ==="
+          df -h "$HOME"
