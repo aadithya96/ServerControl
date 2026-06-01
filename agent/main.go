@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/servercontrol/agent/handlers"
-	"github.com/servercontrol/agent/middleware"
+	"github.com/aadithya96/ServerControl/agent/handlers"
+	"github.com/aadithya96/ServerControl/agent/middleware"
 )
 
 const version = "1.0.0"
