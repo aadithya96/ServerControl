@@ -15,7 +15,10 @@ object QrCodeUtil {
     fun generateQrBitmap(data: String, size: Int = 512): Bitmap {
         val hints = mapOf(
             EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M,
-            EncodeHintType.MARGIN to 1
+            // A quiet zone of at least 4 modules is required by the QR spec.
+            // A margin of 1 (the previous value) makes the code unscannable on
+            // many readers, which is why generated codes "didn't work".
+            EncodeHintType.MARGIN to 4
         )
         val matrix = MultiFormatWriter().encode(data, BarcodeFormat.QR_CODE, size, size, hints)
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)

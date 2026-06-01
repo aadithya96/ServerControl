@@ -280,86 +280,72 @@ fun SettingsScreen(
     }
 
     if (showRefreshDialog) {
-        ModalBottomSheet(onDismissRequest = { showRefreshDialog = false }) {
-            PickerSheetContent(
-                title = "Refresh Interval",
-                onDismiss = { showRefreshDialog = false }
-            ) {
-                listOf(2 to "2 seconds", 5 to "5 seconds", 10 to "10 seconds", 30 to "30 seconds")
-                    .forEach { (secs, label) ->
-                        val selected = state.refreshInterval == secs
-                        PickerOption(
-                            label = label,
-                            selected = selected,
-                            onClick = { viewModel.setRefreshInterval(secs); showRefreshDialog = false }
-                        )
-                    }
-            }
+        PickerDialog(
+            title = "Refresh Interval",
+            onDismiss = { showRefreshDialog = false }
+        ) {
+            listOf(2 to "2 seconds", 5 to "5 seconds", 10 to "10 seconds", 30 to "30 seconds")
+                .forEach { (secs, label) ->
+                    PickerOption(
+                        label = label,
+                        selected = state.refreshInterval == secs,
+                        onClick = { viewModel.setRefreshInterval(secs); showRefreshDialog = false }
+                    )
+                }
         }
     }
 
     if (showCpuAlertDialog) {
-        ModalBottomSheet(onDismissRequest = { showCpuAlertDialog = false }) {
-            PickerSheetContent(
-                title = "CPU Alert Threshold",
-                onDismiss = { showCpuAlertDialog = false }
-            ) {
-                listOf(50, 70, 80, 90).forEach { pct ->
-                    val selected = state.cpuAlertThreshold == pct
-                    PickerOption(
-                        label = "$pct%",
-                        selected = selected,
-                        onClick = { viewModel.setCpuAlertThreshold(pct); showCpuAlertDialog = false }
-                    )
-                }
+        PickerDialog(
+            title = "CPU Alert Threshold",
+            onDismiss = { showCpuAlertDialog = false }
+        ) {
+            listOf(50, 70, 80, 90).forEach { pct ->
+                PickerOption(
+                    label = "$pct%",
+                    selected = state.cpuAlertThreshold == pct,
+                    onClick = { viewModel.setCpuAlertThreshold(pct); showCpuAlertDialog = false }
+                )
             }
         }
     }
 
     if (showDiskAlertDialog) {
-        ModalBottomSheet(onDismissRequest = { showDiskAlertDialog = false }) {
-            PickerSheetContent(
-                title = "Disk Alert Threshold",
-                onDismiss = { showDiskAlertDialog = false }
-            ) {
-                listOf(70, 80, 90, 95).forEach { pct ->
-                    val selected = state.diskAlertThreshold == pct
-                    PickerOption(
-                        label = "$pct%",
-                        selected = selected,
-                        onClick = { viewModel.setDiskAlertThreshold(pct); showDiskAlertDialog = false }
-                    )
-                }
+        PickerDialog(
+            title = "Disk Alert Threshold",
+            onDismiss = { showDiskAlertDialog = false }
+        ) {
+            listOf(70, 80, 90, 95).forEach { pct ->
+                PickerOption(
+                    label = "$pct%",
+                    selected = state.diskAlertThreshold == pct,
+                    onClick = { viewModel.setDiskAlertThreshold(pct); showDiskAlertDialog = false }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun PickerSheetContent(
+private fun PickerDialog(
     title: String,
     onDismiss: () -> Unit,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                content = content
+            )
+        },
+        confirmButton = {
             TextButton(onClick = onDismiss) { Text("Done") }
         }
-        content()
-    }
+    )
 }
 
 @Composable

@@ -3,9 +3,12 @@ package com.servercontrol
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricManager.Authenticators
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -85,7 +88,16 @@ class MainActivity : FragmentActivity() {
                             if (vpnActive) {
                                 VpnWarningBanner()
                             }
-                            Box(modifier = Modifier.weight(1f)) {
+                            // When the banner occupies the status-bar area, consume that
+                            // inset so the NavGraph screens below don't pad for it twice.
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .then(
+                                        if (vpnActive) Modifier.consumeWindowInsets(WindowInsets.statusBars)
+                                        else Modifier
+                                    )
+                            ) {
                                 NavGraph()
                             }
                         }
@@ -109,6 +121,25 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun showBiometricPrompt() {
+        val biometricManager = BiometricManager.from(this)
+
+        // Device-credential (PIN/pattern/password) fallback is only safe to combine
+        // with biometrics from API 30+. On older devices fall back to biometric-only.
+        val allowDeviceCredential = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+        val combined = Authenticators.BIOMETRIC_STRONG or Authenticators.DEVICE_CREDENTIAL
+
+        val useCombined = allowDeviceCredential &&
+            biometricManager.canAuthenticate(combined) == BiometricManager.BIOMETRIC_SUCCESS
+        val canBiometric =
+            biometricManager.canAuthenticate(Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS
+
+        // No biometric AND no device credential available: don't lock the user out
+        // of their own app forever — just unlock.
+        if (!useCombined && !canBiometric) {
+            isAuthenticatedState.value = true
+            return
+        }
+
         val executor = ContextCompat.getMainExecutor(this)
         val prompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
@@ -116,16 +147,24 @@ class MainActivity : FragmentActivity() {
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                // Keep locked — user dismissed or no biometric enrolled
+                // Keep locked — user dismissed or cancelled.
                 isAuthenticatedState.value = false
             }
         })
-        val info = BiometricPrompt.PromptInfo.Builder()
+
+        val builder = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Unlock ServerControl")
             .setSubtitle("Verify your identity to access your servers")
-            .setNegativeButtonText("Cancel")
-            .build()
-        prompt.authenticate(info)
+
+        if (useCombined) {
+            // A negative button cannot be combined with DEVICE_CREDENTIAL.
+            builder.setAllowedAuthenticators(combined)
+        } else {
+            builder.setAllowedAuthenticators(Authenticators.BIOMETRIC_WEAK)
+            builder.setNegativeButtonText("Cancel")
+        }
+
+        prompt.authenticate(builder.build())
     }
 }
 
@@ -161,6 +200,7 @@ private fun VpnWarningBanner() {
         modifier = Modifier
             .fillMaxWidth()
             .background(Color(0xFFF57F17))
+            .statusBarsPadding()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
