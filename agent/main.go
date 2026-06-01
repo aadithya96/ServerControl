@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,13 +17,17 @@ import (
 const version = "1.0.0"
 
 func main() {
+	// Preliminary logger so config errors are emitted as structured JSON too.
+	setupLogger("info")
 	cfg := loadConfig()
+	setupLogger(cfg.LogLevel)
 
-	log.SetOutput(os.Stdout)
-	log.SetFlags(log.LstdFlags | log.Lmsgprefix)
-	log.SetPrefix("[servercontrol-agent] ")
-	log.Printf("Starting agent version %s on port %s", version, cfg.Port)
-	log.Printf("Config: %s", cfg.String())
+	slog.Info("starting agent", "port", cfg.Port, "log_level", cfg.LogLevel)
+	slog.Info("config loaded",
+		"metrics_enabled", cfg.MetricsEnabled,
+		"rate_limit_per_sec", cfg.RateLimitPerSec,
+		"tls", cfg.TLSCert != "",
+	)
 
 	mux := http.NewServeMux()
 
@@ -33,7 +37,7 @@ func main() {
 	// Optional Prometheus metrics endpoint — no auth, off by default
 	if cfg.MetricsEnabled {
 		mux.HandleFunc("/metrics", metricsHandler)
-		log.Printf("Prometheus /metrics endpoint enabled")
+		slog.Info("prometheus metrics endpoint enabled", "path", "/metrics")
 	}
 
 	// Auth-protected API router
@@ -161,7 +165,7 @@ func main() {
 		limiter := middleware.NewRateLimiter(rate, rate*2)
 		limiter.StartCleanup(5*time.Minute, 10*time.Minute)
 		rootHandler = limiter.Middleware(rootHandler)
-		log.Printf("Rate limiting enabled: %d req/s per client IP", cfg.RateLimitPerSec)
+		slog.Info("rate limiting enabled", "req_per_sec", cfg.RateLimitPerSec)
 	}
 
 	srv := &http.Server{
@@ -179,24 +183,26 @@ func main() {
 	go func() {
 		var err error
 		if cfg.TLSCert != "" && cfg.TLSKey != "" {
-			log.Printf("TLS enabled (cert=%s)", cfg.TLSCert)
+			slog.Info("TLS enabled", "cert", cfg.TLSCert)
 			err = srv.ListenAndServeTLS(cfg.TLSCert, cfg.TLSKey)
 		} else {
 			err = srv.ListenAndServe()
 		}
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
-	log.Printf("Agent listening on :%s", cfg.Port)
+	slog.Info("agent listening", "addr", ":"+cfg.Port)
 	<-quit
-	log.Println("Shutting down...")
+	slog.Info("shutting down")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Forced shutdown: %v", err)
+		slog.Error("forced shutdown", "error", err)
+		os.Exit(1)
 	}
-	log.Println("Agent stopped")
+	slog.Info("agent stopped")
 }

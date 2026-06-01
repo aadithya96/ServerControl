@@ -34,6 +34,13 @@ Priority order: CLI flags > environment variables > `/etc/servercontrol/agent.co
 | `--metrics` | `SC_METRICS` | `false` | Enable Prometheus `/metrics` endpoint |
 | `--rate-limit` | `SC_RATE_LIMIT` | `30` | Max requests/sec per client IP (`0` disables) |
 
+## Logging
+
+The agent emits structured JSON logs to stdout (one object per line) via Go's
+`log/slog`, including a `service`, `version`, and `level` on every line. Request
+logs include `method`, `path`, `status`, and `duration_ms`. Use `--log-level`
+(`debug`/`info`/`warn`/`error`) to control verbosity.
+
 ## API Endpoints
 
 All endpoints (except `/health` and `/metrics`) require `Authorization: Bearer <token>`.

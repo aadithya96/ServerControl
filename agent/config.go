@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -64,7 +64,8 @@ func loadConfig() *Config {
 	cfg.RateLimitPerSec = parseIntOrDefault(rateLimitFlag, 30)
 
 	if cfg.Token == "" {
-		log.Fatal("ERROR: No auth token configured. Set --token, SC_TOKEN env var, or TOKEN= in /etc/servercontrol/agent.conf")
+		slog.Error("no auth token configured; set --token, SC_TOKEN env var, or TOKEN= in /etc/servercontrol/agent.conf")
+		os.Exit(1)
 	}
 
 	return cfg
