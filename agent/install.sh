@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-AGENT_VERSION="${SC_AGENT_VERSION:-1.0.4}"
+AGENT_VERSION="${SC_AGENT_VERSION:-1.0.5}"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="servercontrol-agent"
 CONFIG_DIR="/etc/servercontrol"
