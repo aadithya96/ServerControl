@@ -103,7 +103,8 @@ fun NavGraph() {
                     navController.navigate(Screen.AgentInstaller.createRoute(serverId)) {
                         popUpTo(Screen.AddServer.route) { inclusive = true }
                     }
-                }
+                },
+                onScanQr = { navController.navigate(Screen.QrScan.route) }
             )
         }
 

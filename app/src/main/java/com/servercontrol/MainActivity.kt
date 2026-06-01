@@ -1,16 +1,28 @@
 package com.servercontrol
 
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.servercontrol.presentation.navigation.NavGraph
 import com.servercontrol.presentation.settings.SettingsViewModel
@@ -18,7 +30,9 @@ import com.servercontrol.presentation.theme.ServerControlTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
+
+    private val isAuthenticatedState = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -28,14 +42,139 @@ class MainActivity : ComponentActivity() {
         setContent {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             val darkTheme by settingsViewModel.darkTheme.collectAsState()
+            val settings by settingsViewModel.uiState.collectAsState()
+            val isAuthenticated by isAuthenticatedState
+
+            LaunchedEffect(settings.biometricLockEnabled) {
+                if (!settings.biometricLockEnabled) {
+                    isAuthenticatedState.value = true
+                } else if (!isAuthenticatedState.value) {
+                    showBiometricPrompt()
+                }
+            }
 
             ServerControlTheme(darkTheme = darkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    NavGraph()
+                    if (!settings.biometricLockEnabled || isAuthenticated) {
+                        val vpnActive = if (settings.vpnDetectionEnabled) rememberVpnState() else false
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            if (vpnActive) {
+                                VpnWarningBanner()
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                NavGraph()
+                            }
+                        }
+                    } else {
+                        BiometricLockScreen(onAuthenticate = { showBiometricPrompt() })
+                    }
                 }
+            }
+        }
+    }
+
+    private fun showBiometricPrompt() {
+        val executor = ContextCompat.getMainExecutor(this)
+        val prompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                isAuthenticatedState.value = true
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                isAuthenticatedState.value = false
+            }
+        })
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Unlock ServerControl")
+            .setSubtitle("Verify your identity to access your servers")
+            .setNegativeButtonText("Cancel")
+            .build()
+        prompt.authenticate(info)
+    }
+}
+
+@Composable
+private fun rememberVpnState(): Boolean {
+    val context = LocalContext.current
+    val connectivityManager = remember {
+        context.getSystemService(ConnectivityManager::class.java)
+    }
+    var vpnActive by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        fun check() {
+            val caps = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+            vpnActive = caps != null && !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+        }
+        check()
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) = check()
+            override fun onLost(network: Network) = check()
+            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = check()
+        }
+        connectivityManager.registerDefaultNetworkCallback(callback)
+        onDispose { connectivityManager.unregisterNetworkCallback(callback) }
+    }
+
+    return vpnActive
+}
+
+@Composable
+private fun VpnWarningBanner() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFF57F17))
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            Icons.Default.Warning,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(18.dp)
+        )
+        Text(
+            "VPN active — server connections may be affected",
+            color = Color.White,
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun BiometricLockScreen(onAuthenticate: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Icon(
+                Icons.Default.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(72.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                "ServerControl is locked",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                "Authenticate to continue",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Button(onClick = onAuthenticate, modifier = Modifier.fillMaxWidth()) {
+                Text("Unlock")
             }
         }
     }
