@@ -9,6 +9,8 @@ jobs:
   release-android:
     runs-on: self-hosted
     timeout-minutes: 30
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -44,6 +46,8 @@ jobs:
   release-agent:
     runs-on: self-hosted
     timeout-minutes: 20
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -79,6 +83,8 @@ jobs:
     runs-on: self-hosted
     needs: release-agent
     timeout-minutes: 10
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
