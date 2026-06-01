@@ -2,14 +2,16 @@ package com.servercontrol.presentation.logs
 
 import android.content.Intent
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -17,15 +19,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.servercontrol.domain.model.LogEntry
 import com.servercontrol.domain.model.LogLevel
-import com.servercontrol.presentation.dashboard.ShimmerCard
+import com.servercontrol.presentation.theme.*
 import com.servercontrol.util.LogParser
 import com.servercontrol.util.Resource
 
@@ -38,34 +42,41 @@ fun LogViewerScreen(
 ) {
     val logs by viewModel.filteredLogs.collectAsState()
     val selectedSource by viewModel.selectedSource.collectAsState()
-    val selectedUnit by viewModel.selectedUnit.collectAsState()
     val lineCount by viewModel.lineCount.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val autoRefresh by viewModel.autoRefresh.collectAsState()
     val autoScroll by viewModel.autoScroll.collectAsState()
+    val selectedUnit by viewModel.selectedUnit.collectAsState()
 
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val logList = (logs as? Resource.Success)?.data ?: emptyList()
 
-    // Auto-scroll to bottom when new logs arrive
-    LaunchedEffect(logList.size, autoScroll) {
-        if (autoScroll && logList.isNotEmpty()) {
-            listState.animateScrollToItem(logList.size - 1)
+    var levelFilter by remember { mutableStateOf<LogLevel?>(null) }
+    val filteredByLevel = if (levelFilter == null) logList
+                          else logList.filter { it.level == levelFilter }
+
+    LaunchedEffect(filteredByLevel.size, autoScroll) {
+        if (autoScroll && filteredByLevel.isNotEmpty()) {
+            listState.animateScrollToItem(filteredByLevel.size - 1)
         }
     }
 
-    // Unit / custom path state
     var unitInput by remember { mutableStateOf(selectedUnit ?: "") }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text("Logs")
                         Text(
-                            "$lineCount lines${if (autoRefresh) " • Live" else ""}",
+                            "Logs",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "${lineCount} lines${if (autoRefresh) " · Live" else ""}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -73,33 +84,30 @@ fun LogViewerScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = viewModel::toggleAutoScroll) {
-                        Icon(
-                            if (autoScroll) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardDoubleArrowDown,
-                            contentDescription = "Auto-scroll",
-                            tint = if (autoScroll) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
                     IconButton(onClick = {
                         val text = viewModel.exportLogs()
                         if (text.isNotBlank()) {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, text)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Export Logs"))
+                            context.startActivity(Intent.createChooser(
+                                Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, text)
+                                }, "Export Logs"
+                            ))
                         }
                     }) {
-                        Icon(Icons.Default.Share, contentDescription = "Export")
+                        Icon(Icons.Filled.Share, "Export")
                     }
                     IconButton(onClick = viewModel::refresh) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Filled.Refresh, "Refresh")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { padding ->
@@ -108,9 +116,47 @@ fun LogViewerScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Source selector
+            // Level filter chips
             LazyRow(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val levels = listOf(null to "ALL") +
+                    listOf(LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR, LogLevel.DEBUG)
+                        .map { it to it.name }
+
+                items(levels.size) { idx ->
+                    val (level, label) = levels[idx]
+                    val selected = levelFilter == level
+                    val chipTextColor = when {
+                        selected -> MaterialTheme.colorScheme.onSecondaryContainer
+                        level == LogLevel.WARN -> StatusWarnColor
+                        level == LogLevel.ERROR -> StatusDownColor
+                        level == LogLevel.DEBUG -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    Surface(
+                        onClick = { levelFilter = level },
+                        shape = ChipShape,
+                        color = if (selected) MaterialTheme.colorScheme.secondaryContainer
+                                else MaterialTheme.colorScheme.background,
+                        border = if (selected) null else BorderStroke(1.dp, OutlineVariant)
+                    ) {
+                        Text(
+                            label,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = chipTextColor
+                        )
+                    }
+                }
+            }
+
+            // Source selector chips
+            LazyRow(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(viewModel.availableSources) { source ->
@@ -129,135 +175,109 @@ fun LogViewerScreen(
                 }
             }
 
-            // Unit / custom path input
+            // Unit input for journal/custom
             if (selectedSource == "journal" || selectedSource == "custom") {
-                val label = if (selectedSource == "journal") "Unit name (e.g. nginx, sshd)" else "File path (e.g. /var/log/app.log)"
+                val label = if (selectedSource == "journal") "Unit name (e.g. nginx, sshd)"
+                            else "File path (e.g. /var/log/app.log)"
                 OutlinedTextField(
                     value = unitInput,
                     onValueChange = { unitInput = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
                     placeholder = { Text(label) },
                     singleLine = true,
                     trailingIcon = {
                         IconButton(onClick = {
                             viewModel.setSource(selectedSource, if (unitInput.isBlank()) null else unitInput)
                         }) {
-                            Icon(Icons.Default.Search, contentDescription = "Apply")
+                            Icon(Icons.Filled.Search, "Apply")
                         }
                     }
                 )
             }
 
-            // Line count chips
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(100, 200, 500, 1000).forEach { n ->
-                    FilterChip(
-                        selected = lineCount == n,
-                        onClick = { viewModel.setLineCount(n) },
-                        label = { Text("$n") }
-                    )
-                }
-            }
-
-            // Search
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = viewModel::setSearchQuery,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                placeholder = { Text("Search logs…") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (searchQuery.isNotBlank()) {
-                        IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Clear")
-                        }
-                    }
-                },
-                singleLine = true
-            )
-
-            // Auto refresh indicator
-            if (autoRefresh) {
-                val pulse by rememberInfiniteTransition(label = "pulse").animateFloat(
-                    initialValue = 0.4f, targetValue = 1f,
-                    animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
-                    label = "pulse_alpha"
-                )
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(Color(0xFF4CAF50).copy(alpha = pulse), RoundedCornerShape(50))
-                    )
-                    Text("Live", style = MaterialTheme.typography.labelSmall, color = Color(0xFF4CAF50))
-                }
-            }
-
-            // Toggle auto-refresh button
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = viewModel::toggleAutoRefresh,
-                    colors = if (autoRefresh) ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color(0xFF4CAF50).copy(alpha = 0.15f)
-                    ) else ButtonDefaults.outlinedButtonColors()
-                ) {
-                    Icon(
-                        if (autoRefresh) Icons.Default.Stop else Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(if (autoRefresh) "Stop Live" else "Start Live")
-                }
-            }
-
-            // Log content
+            // Log console surface
             when (val l = logs) {
                 is Resource.Loading -> {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        repeat(8) { ShimmerCard() }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
                 is Resource.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(l.message, color = MaterialTheme.colorScheme.error)
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(Modifier.height(8.dp))
                             Button(onClick = viewModel::refresh) { Text("Retry") }
                         }
                     }
                 }
                 is Resource.Success -> {
-                    if (l.data.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No log entries found", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    } else {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        // Console card
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .border(1.dp, OutlineVariant, WellShape),
+                            shape = WellShape,
+                            color = MaterialTheme.colorScheme.surface
                         ) {
-                            itemsIndexed(l.data) { _, entry ->
-                                LogEntryRow(entry = entry, searchQuery = searchQuery)
+                            if (filteredByLevel.isEmpty()) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        "No log entries",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                                ) {
+                                    itemsIndexed(filteredByLevel) { _, entry ->
+                                        LogLine(entry = entry, searchQuery = searchQuery)
+                                        HorizontalDivider(color = SC2, thickness = 1.dp)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Live footer
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            if (autoRefresh) {
+                                LiveIndicator()
+                            } else {
+                                TextButton(onClick = viewModel::toggleAutoRefresh) {
+                                    Icon(
+                                        Icons.Filled.PlayArrow,
+                                        null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Start Live", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                            if (autoRefresh) {
+                                TextButton(onClick = viewModel::toggleAutoRefresh) {
+                                    Icon(Icons.Filled.Stop, null, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Stop", fontSize = 12.sp)
+                                }
                             }
                         }
                     }
@@ -268,55 +288,88 @@ fun LogViewerScreen(
 }
 
 @Composable
-private fun LogEntryRow(entry: LogEntry, searchQuery: String) {
+private fun LiveIndicator() {
+    val sc = LocalStatusColors.current
+    val pulse by rememberInfiniteTransition(label = "pulse").animateFloat(
+        initialValue = 0.4f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
+        label = "pulse_alpha"
+    )
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(sc.online.copy(alpha = pulse))
+        )
+        Text(
+            "streaming live · tail -f",
+            fontFamily = MonoFamily,
+            fontSize = 11.sp,
+            color = sc.online
+        )
+    }
+}
+
+@Composable
+private fun LogLine(entry: LogEntry, searchQuery: String) {
+    val sc = LocalStatusColors.current
+    val levelColor = when (entry.level) {
+        LogLevel.ERROR -> sc.down
+        LogLevel.WARN  -> sc.warn
+        LogLevel.INFO  -> sc.info
+        LogLevel.DEBUG -> MaterialTheme.colorScheme.primary
+        else           -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val levelLabel = when (entry.level) {
+        LogLevel.ERROR -> "ERR"
+        LogLevel.WARN  -> "WRN"
+        LogLevel.INFO  -> "INF"
+        LogLevel.DEBUG -> "DBG"
+        else           -> "???"
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 3.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.Top
     ) {
         if (entry.timestamp.isNotBlank()) {
             Text(
                 entry.timestamp.take(19).replace("T", " "),
-                style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.width(118.dp)
+                fontFamily = MonoFamily,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.width(110.dp)
             )
         }
-        LevelBadge(entry.level)
+        // Level tag
+        Text(
+            levelLabel,
+            fontFamily = MonoFamily,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            color = levelColor,
+            modifier = Modifier.width(28.dp)
+        )
+        // Message
         val annotated = remember(entry.message, searchQuery) {
             LogParser.highlight(entry, searchQuery)
         }
         Text(
             annotated,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = MonoFamily,
+            fontSize = 12.5.sp,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
             overflow = TextOverflow.Clip,
             softWrap = true
-        )
-    }
-}
-
-@Composable
-private fun LevelBadge(level: LogLevel) {
-    val (label, color) = when (level) {
-        LogLevel.ERROR -> "ERR" to Color(0xFFF44336)
-        LogLevel.WARN -> "WRN" to Color(0xFFFFC107)
-        LogLevel.INFO -> "INF" to Color(0xFF2196F3)
-        LogLevel.DEBUG -> "DBG" to Color(0xFF9E9E9E)
-        LogLevel.UNKNOWN -> "???" to Color(0xFF757575)
-    }
-    Surface(
-        shape = RoundedCornerShape(4.dp),
-        color = color.copy(alpha = 0.2f),
-        modifier = Modifier.width(32.dp)
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            modifier = Modifier.padding(horizontal = 2.dp, vertical = 1.dp)
         )
     }
 }

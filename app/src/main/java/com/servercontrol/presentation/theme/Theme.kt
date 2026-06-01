@@ -2,22 +2,31 @@ package com.servercontrol.presentation.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Green80,
-    secondary = Teal80,
-    tertiary = Red80,
-    background = DarkBackground,
-    surface = DarkSurface,
-    surfaceVariant = DarkSurfaceVariant
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Green40,
-    secondary = Teal40,
-    tertiary = Red40
+private val EmeraldDarkColorScheme = darkColorScheme(
+    primary = Primary,
+    onPrimary = OnPrimary,
+    primaryContainer = PrimaryContainer,
+    onPrimaryContainer = OnPrimaryContainer,
+    secondary = Secondary,
+    secondaryContainer = SecondaryContainer,
+    onSecondaryContainer = OnSecondaryContainer,
+    tertiary = Tertiary,
+    background = Background,
+    surface = Surface,
+    onSurface = OnSurface,
+    onSurfaceVariant = OnSurfaceVariant,
+    outline = Outline,
+    outlineVariant = OutlineVariant,
+    error = ErrorColor,
+    errorContainer = ErrorContainerColor,
+    onError = OnErrorColor,
+    surfaceContainerLowest = SC1,
+    surfaceContainer = SC2,
+    surfaceContainerHigh = SC3,
+    surfaceContainerHighest = SC4,
 )
 
 @Composable
@@ -25,11 +34,12 @@ fun ServerControlTheme(
     darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalStatusColors provides StatusColors()) {
+        MaterialTheme(
+            colorScheme = EmeraldDarkColorScheme,
+            typography = Typography,
+            shapes = Shapes,
+            content = content
+        )
+    }
 }
