@@ -44,7 +44,7 @@ class AgentInstallerViewModel @Inject constructor(
         data object Installing : InstallerState()
         data class StreamingOutput(val lines: List<String>, val isComplete: Boolean) : InstallerState()
         data class Success(val token: String, val port: Int) : InstallerState()
-        data class Error(val message: String) : InstallerState()
+        data class Error(val message: String, val logs: List<String> = emptyList()) : InstallerState()
     }
 
     private val _state = MutableStateFlow<InstallerState>(InstallerState.Idle)
@@ -198,10 +198,10 @@ class AgentInstallerViewModel @Inject constructor(
                         val finalToken = token ?: "UNKNOWN"
                         _state.value = InstallerState.Success(finalToken, port)
                     } else {
-                        _state.value = InstallerState.StreamingOutput(outputLines.value, true)
-                        if (exitCode != 0) {
-                            _state.value = InstallerState.Error("Installation failed with exit code $exitCode")
-                        }
+                        _state.value = InstallerState.Error(
+                            "Installation failed with exit code $exitCode",
+                            outputLines.value
+                        )
                     }
                 } finally {
                     session.disconnect()

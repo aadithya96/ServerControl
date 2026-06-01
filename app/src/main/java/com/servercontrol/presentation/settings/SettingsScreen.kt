@@ -3,6 +3,7 @@ package com.servercontrol.presentation.settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -26,10 +27,13 @@ import com.servercontrol.presentation.theme.*
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
+    onQrTransfer: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
     var showRefreshDialog by remember { mutableStateOf(false) }
+    var showCpuAlertDialog by remember { mutableStateOf(false) }
+    var showDiskAlertDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -62,7 +66,7 @@ fun SettingsScreen(
         ) {
             // Profile card
             item {
-                ProfileCard()
+                ProfileCard(onQrClick = onQrTransfer)
             }
 
             // Account section
@@ -75,8 +79,8 @@ fun SettingsScreen(
                             title = "Alert Notifications",
                             trailing = {
                                 Switch(
-                                    checked = state.backgroundMonitoringEnabled,
-                                    onCheckedChange = viewModel::setBackgroundMonitoringEnabled,
+                                    checked = state.alertNotificationsEnabled,
+                                    onCheckedChange = viewModel::setAlertNotificationsEnabled,
                                     colors = SwitchDefaults.colors(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary,
                                         uncheckedTrackColor = SC4
@@ -88,7 +92,7 @@ fun SettingsScreen(
                             icon = Icons.Filled.QrCode2,
                             title = "QR Transfer",
                             trailingText = "Tap to share",
-                            onClick = {}
+                            onClick = onQrTransfer
                         )
                     )
                 )
@@ -123,13 +127,13 @@ fun SettingsScreen(
                             icon = Icons.Filled.Memory,
                             title = "CPU Alert Threshold",
                             trailingText = "${state.cpuAlertThreshold}%",
-                            onClick = {}
+                            onClick = { showCpuAlertDialog = true }
                         ),
                         SettingRowData(
                             icon = Icons.Filled.Storage,
                             title = "Disk Alert Threshold",
                             trailingText = "${state.diskAlertThreshold}%",
-                            onClick = {}
+                            onClick = { showDiskAlertDialog = true }
                         )
                     )
                 )
@@ -145,8 +149,8 @@ fun SettingsScreen(
                             title = "Biometric Lock",
                             trailing = {
                                 Switch(
-                                    checked = false,
-                                    onCheckedChange = {},
+                                    checked = state.biometricLockEnabled,
+                                    onCheckedChange = viewModel::setBiometricLockEnabled,
                                     colors = SwitchDefaults.colors(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary,
                                         uncheckedTrackColor = SC4
@@ -159,8 +163,8 @@ fun SettingsScreen(
                             title = "VPN Detection",
                             trailing = {
                                 Switch(
-                                    checked = false,
-                                    onCheckedChange = {},
+                                    checked = state.vpnDetectionEnabled,
+                                    onCheckedChange = viewModel::setVpnDetectionEnabled,
                                     colors = SwitchDefaults.colors(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary,
                                         uncheckedTrackColor = SC4
@@ -257,10 +261,68 @@ fun SettingsScreen(
             }
         )
     }
+
+    if (showCpuAlertDialog) {
+        AlertDialog(
+            onDismissRequest = { showCpuAlertDialog = false },
+            title = { Text("CPU Alert Threshold") },
+            text = {
+                Column {
+                    listOf(50, 70, 80, 90).forEach { pct ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = state.cpuAlertThreshold == pct,
+                                onClick = {
+                                    viewModel.setCpuAlertThreshold(pct)
+                                    showCpuAlertDialog = false
+                                }
+                            )
+                            Text("$pct%")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCpuAlertDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showDiskAlertDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiskAlertDialog = false },
+            title = { Text("Disk Alert Threshold") },
+            text = {
+                Column {
+                    listOf(70, 80, 90, 95).forEach { pct ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = state.diskAlertThreshold == pct,
+                                onClick = {
+                                    viewModel.setDiskAlertThreshold(pct)
+                                    showDiskAlertDialog = false
+                                }
+                            )
+                            Text("$pct%")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDiskAlertDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
 }
 
 @Composable
-private fun ProfileCard() {
+private fun ProfileCard(onQrClick: () -> Unit = {}) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
@@ -304,7 +366,9 @@ private fun ProfileCard() {
                 Icons.Filled.QrCode2,
                 contentDescription = "QR",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier
+                    .size(22.dp)
+                    .clickable(onClick = onQrClick)
             )
         }
     }

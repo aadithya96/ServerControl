@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +52,7 @@ fun ServerListScreen(
     viewModel: ServerListViewModel = hiltViewModel()
 ) {
     val servers by viewModel.servers.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     var serverToDelete by remember { mutableStateOf<ServerProfile?>(null) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -88,10 +90,15 @@ fun ServerListScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = viewModel::refreshStatuses,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+        ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -235,6 +242,7 @@ fun ServerListScreen(
                 )
             }
         }
+        } // PullToRefreshBox
     }
 
     serverToDelete?.let { server ->

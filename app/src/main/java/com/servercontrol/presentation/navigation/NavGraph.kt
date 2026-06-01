@@ -170,7 +170,8 @@ fun NavGraph() {
 
         composable(Screen.Settings.route) {
             com.servercontrol.presentation.settings.SettingsScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onQrTransfer = { navController.navigate(Screen.QrScan.route) }
             )
         }
 
