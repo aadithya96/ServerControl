@@ -100,7 +100,10 @@ fun QrShareScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (qrBitmap != null) {
-                Card(modifier = Modifier.size(280.dp)) {
+                Card(
+                    modifier = Modifier.size(280.dp),
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White)
+                ) {
                     Image(
                         bitmap = qrBitmap!!.asImageBitmap(),
                         contentDescription = "QR Code",

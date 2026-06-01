@@ -45,6 +45,7 @@ func main() {
 	apiMux.HandleFunc("/api/v1/processes", handlers.ProcessesHandler)
 	apiMux.HandleFunc("/api/v1/disk", handlers.DiskHandler)
 	apiMux.HandleFunc("/api/v1/connections", handlers.ConnectionsHandler)
+	apiMux.HandleFunc("/api/v1/bandwidth", handlers.BandwidthHandler)
 	// Services endpoints
 	apiMux.HandleFunc("/api/v1/services/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path

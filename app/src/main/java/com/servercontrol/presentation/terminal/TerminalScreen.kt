@@ -353,27 +353,23 @@ private fun TerminalOutput(
         onFontSizeChange(newSize)
     }
 
-    // Split output into lines for display in LazyColumn
+    // Split output into lines for display in LazyColumn. Each line EXCLUDES its
+    // trailing '\n' — keeping the newline in the slice makes every Text render an
+    // extra blank row, which doubled the line spacing and mangled the output.
     val lines = remember(output) {
         val text = output.text
-        val lineRanges = mutableListOf<IntRange>()
+        if (text.isEmpty()) return@remember listOf(AnnotatedString(""))
+        val result = mutableListOf<AnnotatedString>()
         var start = 0
-        text.forEachIndexed { i, c ->
-            if (c == '\n') {
-                lineRanges.add(start..i)
+        for (i in text.indices) {
+            if (text[i] == '\n') {
+                result.add(output.subSequence(start, i))
                 start = i + 1
             }
         }
-        if (start <= text.length) {
-            lineRanges.add(start until text.length)
-        }
-        lineRanges.map { range ->
-            if (range.first <= range.last && range.last <= output.length) {
-                output.subSequence(range.first, range.last + 1)
-            } else {
-                AnnotatedString("")
-            }
-        }
+        // Trailing segment after the last newline (empty if text ends with '\n').
+        result.add(output.subSequence(start, text.length))
+        result
     }
 
     // Auto-scroll to bottom when new output arrives
@@ -418,17 +414,19 @@ private fun ExtendedKeyRow(
     onCopy: () -> Unit,
     onPaste: () -> Unit
 ) {
+    // Control/navigation keys must include the ESC () prefix so the remote
+    // PTY recognises them as escape sequences rather than literal "[A" text.
     val keys = listOf(
         "Tab" to "\t",
-        "Esc" to "",
-        "↑" to "[A",
-        "↓" to "[B",
-        "←" to "[D",
-        "→" to "[C",
-        "PgUp" to "[5~",
-        "PgDn" to "[6~",
-        "Home" to "[H",
-        "End" to "[F",
+        "Esc" to "",
+        "↑" to "[A",
+        "↓" to "[B",
+        "←" to "[D",
+        "→" to "[C",
+        "PgUp" to "[5~",
+        "PgDn" to "[6~",
+        "Home" to "[H",
+        "End" to "[F",
         "|" to "|",
         "~" to "~",
         "/" to "/"

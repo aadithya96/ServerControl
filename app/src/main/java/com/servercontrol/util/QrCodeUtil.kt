@@ -15,15 +15,26 @@ object QrCodeUtil {
     fun generateQrBitmap(data: String, size: Int = 512): Bitmap {
         val hints = mapOf(
             EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M,
-            EncodeHintType.MARGIN to 1
+            // A quiet zone of at least 4 modules is required by the QR spec.
+            // A margin of 1 (the previous value) makes the code unscannable on
+            // many readers, which is why generated codes "didn't work".
+            EncodeHintType.MARGIN to 4
         )
         val matrix = MultiFormatWriter().encode(data, BarcodeFormat.QR_CODE, size, size, hints)
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
-        for (x in 0 until size) {
-            for (y in 0 until size) {
-                bitmap.setPixel(x, y, if (matrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+        val width = matrix.width
+        val height = matrix.height
+        // ARGB_8888 guarantees pure black/white modules. RGB_565 quantizes the
+        // colours, which can reduce the contrast scanners rely on.
+        val pixels = IntArray(width * height)
+        for (y in 0 until height) {
+            val offset = y * width
+            for (x in 0 until width) {
+                pixels[offset + x] =
+                    if (matrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE
             }
         }
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
         return bitmap
     }
 

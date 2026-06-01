@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,7 +13,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,6 +46,8 @@ fun ProcessListScreen(
     var processForBottomSheet by remember { mutableStateOf<Process?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val sortBy by viewModel.sortBy.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    var showSearch by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.killResult) {
         state.killResult?.let { snackbarHostState.showSnackbar(it) }
@@ -107,21 +112,57 @@ fun ProcessListScreen(
                     )
                 }
                 Spacer(Modifier.weight(1f))
-                // Filter button
+                // Filter/search button — toggles the search field below.
+                val filterActive = showSearch || searchQuery.isNotEmpty()
                 Box(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(RoundedCornerShape(11.dp))
-                        .border(1.dp, OutlineVariant, RoundedCornerShape(11.dp)),
+                        .background(
+                            if (filterActive) MaterialTheme.colorScheme.secondaryContainer
+                            else MaterialTheme.colorScheme.background
+                        )
+                        .border(
+                            1.dp,
+                            if (filterActive) MaterialTheme.colorScheme.secondary else OutlineVariant,
+                            RoundedCornerShape(11.dp)
+                        )
+                        .clickable {
+                            showSearch = !showSearch
+                            if (!showSearch) viewModel.setSearchQuery("")
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Filled.FilterList,
                         contentDescription = "Filter",
                         modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = if (filterActive) MaterialTheme.colorScheme.onSecondaryContainer
+                               else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+
+            // Search field (filter by process name or command)
+            if (showSearch) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = viewModel::setSearchQuery,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    placeholder = { Text("Filter by name or command…") },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                                Icon(Icons.Filled.Close, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
             }
 
             when {

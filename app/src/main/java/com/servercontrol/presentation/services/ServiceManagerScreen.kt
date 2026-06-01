@@ -85,44 +85,43 @@ fun ServiceManagerScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // State filter chips
-            LazyRow(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            // Single filter row: a "Type" dropdown plus scrollable state chips.
+            // (Previously two separate chip rows — state and type — which was
+            // confusing; the type dimension is now a compact dropdown.)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val stateFilters = listOf("all" to "All", "active" to "Active", "failed" to "Failed", "inactive" to "Inactive")
-                items(stateFilters) { (value, label) ->
-                    FilterChip(
-                        selected = stateFilter == value,
-                        onClick = { viewModel.setStateFilter(value) },
-                        label = {
-                            if (value == "failed" && failedCount > 0) {
-                                Text("Failed ($failedCount)", color = if (stateFilter == value) Color.White else MaterialTheme.colorScheme.error)
-                            } else {
-                                Text(label)
-                            }
-                        },
-                        colors = if (value == "failed" && failedCount > 0 && stateFilter != value) {
-                            FilterChipDefaults.filterChipColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-                            )
-                        } else FilterChipDefaults.filterChipColors()
-                    )
-                }
-            }
-
-            // Type filter chips
-            LazyRow(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val typeFilters = listOf("all" to "All", "service" to "Service", "timer" to "Timer", "socket" to "Socket")
-                items(typeFilters) { (value, label) ->
-                    FilterChip(
-                        selected = typeFilter == value,
-                        onClick = { viewModel.setTypeFilter(value) },
-                        label = { Text(label) }
-                    )
+                TypeFilterDropdown(
+                    selected = typeFilter,
+                    onSelect = viewModel::setTypeFilter
+                )
+                LazyRow(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val stateFilters = listOf("all" to "All", "active" to "Active", "failed" to "Failed", "inactive" to "Inactive")
+                    items(stateFilters) { (value, label) ->
+                        FilterChip(
+                            selected = stateFilter == value,
+                            onClick = { viewModel.setStateFilter(value) },
+                            label = {
+                                if (value == "failed" && failedCount > 0) {
+                                    Text("Failed ($failedCount)", color = if (stateFilter == value) Color.White else MaterialTheme.colorScheme.error)
+                                } else {
+                                    Text(label)
+                                }
+                            },
+                            colors = if (value == "failed" && failedCount > 0 && stateFilter != value) {
+                                FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                                )
+                            } else FilterChipDefaults.filterChipColors()
+                        )
+                    }
                 }
             }
 
@@ -233,6 +232,47 @@ fun ServiceManagerScreen(
                 onAction = { action -> viewModel.performAction(service.name, action) },
                 onLoadLogs = { viewModel.loadLogs(service.name) }
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TypeFilterDropdown(
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    val typeFilters = listOf("all" to "All types", "service" to "Service", "timer" to "Timer", "socket" to "Socket")
+    var expanded by remember { mutableStateOf(false) }
+    val label = typeFilters.firstOrNull { it.first == selected }?.second ?: "All types"
+
+    Box {
+        FilterChip(
+            selected = selected != "all",
+            onClick = { expanded = true },
+            label = { Text(label) },
+            leadingIcon = {
+                Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(18.dp))
+            },
+            trailingIcon = {
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            typeFilters.forEach { (value, text) ->
+                DropdownMenuItem(
+                    text = { Text(text) },
+                    onClick = {
+                        onSelect(value)
+                        expanded = false
+                    },
+                    trailingIcon = {
+                        if (value == selected) {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                        }
+                    }
+                )
+            }
         }
     }
 }
