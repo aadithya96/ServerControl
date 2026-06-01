@@ -2,6 +2,7 @@ package com.servercontrol.presentation.servers
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -69,12 +70,20 @@ fun AgentInstallerScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Dns,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Dns,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = serverName.ifBlank { "Server" },
@@ -376,6 +385,9 @@ fun AgentInstallerScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
+                    }
+                    if (currentState.logs.isNotEmpty()) {
+                        InstallerOutputCard(lines = currentState.logs)
                     }
                     Button(
                         onClick = viewModel::checkPrereqs,

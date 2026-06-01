@@ -3,6 +3,7 @@ package com.servercontrol.presentation.settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -26,6 +27,7 @@ import com.servercontrol.presentation.theme.*
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
+    onQrTransfer: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -62,7 +64,7 @@ fun SettingsScreen(
         ) {
             // Profile card
             item {
-                ProfileCard()
+                ProfileCard(onQrClick = onQrTransfer)
             }
 
             // Account section
@@ -88,7 +90,7 @@ fun SettingsScreen(
                             icon = Icons.Filled.QrCode2,
                             title = "QR Transfer",
                             trailingText = "Tap to share",
-                            onClick = {}
+                            onClick = onQrTransfer
                         )
                     )
                 )
@@ -260,7 +262,7 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun ProfileCard() {
+private fun ProfileCard(onQrClick: () -> Unit = {}) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
@@ -304,7 +306,9 @@ private fun ProfileCard() {
                 Icons.Filled.QrCode2,
                 contentDescription = "QR",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier
+                    .size(22.dp)
+                    .clickable(onClick = onQrClick)
             )
         }
     }
