@@ -10,11 +10,12 @@ import (
 )
 
 type Config struct {
-	Port     string
-	Token    string
-	TLSCert  string
-	TLSKey   string
-	LogLevel string
+	Port           string
+	Token          string
+	TLSCert        string
+	TLSKey         string
+	LogLevel       string
+	MetricsEnabled bool
 }
 
 func loadConfig() *Config {
@@ -29,6 +30,8 @@ func loadConfig() *Config {
 	flag.StringVar(&cfg.TLSCert, "tls-cert", "", "Path to TLS certificate")
 	flag.StringVar(&cfg.TLSKey, "tls-key", "", "Path to TLS key")
 	flag.StringVar(&cfg.LogLevel, "log-level", "", "Log level (debug, info, warn, error)")
+	var metricsFlag string
+	flag.StringVar(&metricsFlag, "metrics", "", "Enable Prometheus /metrics endpoint (true/false)")
 	flag.Parse()
 
 	// Apply defaults from file, then env, then CLI
@@ -47,6 +50,10 @@ func loadConfig() *Config {
 	if cfg.LogLevel == "" {
 		cfg.LogLevel = getEnvOrFileOrDefault("SC_LOG_LEVEL", fileConfig["LOG_LEVEL"], "info")
 	}
+	if metricsFlag == "" {
+		metricsFlag = getEnvOrFileOrDefault("SC_METRICS", fileConfig["METRICS"], "false")
+	}
+	cfg.MetricsEnabled = parseBool(metricsFlag)
 
 	if cfg.Token == "" {
 		log.Fatal("ERROR: No auth token configured. Set --token, SC_TOKEN env var, or TOKEN= in /etc/servercontrol/agent.conf")
@@ -84,6 +91,16 @@ func loadConfigFile(path string) map[string]string {
 	return result
 }
 
+// parseBool interprets common truthy strings ("true", "1", "yes", "on") case-insensitively.
+func parseBool(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "true", "1", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
+
 func getEnvOrFileOrDefault(envKey, fileVal, defaultVal string) string {
 	if v := os.Getenv(envKey); v != "" {
 		return v
@@ -95,5 +112,5 @@ func getEnvOrFileOrDefault(envKey, fileVal, defaultVal string) string {
 }
 
 func (c *Config) String() string {
-	return fmt.Sprintf("port=%s logLevel=%s tlsCert=%s", c.Port, c.LogLevel, c.TLSCert)
+	return fmt.Sprintf("port=%s logLevel=%s tlsCert=%s metrics=%t", c.Port, c.LogLevel, c.TLSCert, c.MetricsEnabled)
 }

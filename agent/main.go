@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -17,11 +16,6 @@ import (
 
 const version = "1.0.0"
 
-type HealthResponse struct {
-	Status  string `json:"status"`
-	Version string `json:"version"`
-}
-
 func main() {
 	cfg := loadConfig()
 
@@ -34,10 +28,13 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Health endpoint — no auth
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(HealthResponse{Status: "ok", Version: version})
-	})
+	mux.HandleFunc("/health", healthHandler)
+
+	// Optional Prometheus metrics endpoint — no auth, off by default
+	if cfg.MetricsEnabled {
+		mux.HandleFunc("/metrics", metricsHandler)
+		log.Printf("Prometheus /metrics endpoint enabled")
+	}
 
 	// Auth-protected API router
 	apiMux := http.NewServeMux()

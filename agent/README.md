@@ -31,18 +31,21 @@ Priority order: CLI flags > environment variables > `/etc/servercontrol/agent.co
 | `--tls-cert` | `SC_TLS_CERT` | — | Path to TLS certificate |
 | `--tls-key` | `SC_TLS_KEY` | — | Path to TLS key |
 | `--log-level` | `SC_LOG_LEVEL` | `info` | Log verbosity |
+| `--metrics` | `SC_METRICS` | `false` | Enable Prometheus `/metrics` endpoint |
 
 ## API Endpoints
 
-All endpoints (except `/health`) require `Authorization: Bearer <token>`.
+All endpoints (except `/health` and `/metrics`) require `Authorization: Bearer <token>`.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/health` | Health check (no auth) |
+| GET | `/health` | Health check (no auth) — status, version, uptime, Go runtime stats |
+| GET | `/metrics` | Prometheus metrics (no auth, only when `--metrics` enabled) |
 | GET | `/api/v1/stats` | CPU, memory, load, uptime |
 | GET | `/api/v1/processes?sort=cpu&limit=50` | Process list |
 | GET | `/api/v1/disk` | Disk mounts and I/O stats |
 | GET | `/api/v1/connections?proto=all` | Network connections |
+| GET | `/api/v1/bandwidth` | Per-interface RX/TX bytes-per-second |
 | GET | `/api/v1/firewall` | iptables rules |
 | DELETE | `/api/v1/process/{pid}?signal=9` | Kill a process |
 | POST | `/api/v1/firewall/toggle` | Toggle a firewall rule |
