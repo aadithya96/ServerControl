@@ -6,9 +6,13 @@ import com.servercontrol.domain.model.ServerProfile
 import com.servercontrol.domain.repository.ServerRepository
 import com.servercontrol.domain.usecase.GetServersUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -27,6 +31,29 @@ class ServerListViewModel @Inject constructor(
         )
 
     val selectedServerId: MutableStateFlow<Long?> = MutableStateFlow(null)
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    init {
+        refreshStatuses()
+    }
+
+    fun refreshStatuses() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isRefreshing.value = true
+            try {
+                serverRepository.getAllServers().map { server ->
+                    async {
+                        val online = serverRepository.testConnection(server).isSuccess
+                        serverRepository.updateServer(server.copy(isOnline = online))
+                    }
+                }.awaitAll()
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
 
     fun deleteServer(id: Long) {
         viewModelScope.launch {
