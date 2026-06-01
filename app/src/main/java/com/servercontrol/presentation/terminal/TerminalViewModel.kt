@@ -131,22 +131,21 @@ class TerminalViewModel @Inject constructor(
         val buffer = rawBuffers.getOrPut(sessionId) { StringBuilder() }
         buffer.append(chunk)
 
-        // Process complete lines plus any partial data (we parse the whole buffer each time)
-        // but we keep a cap to avoid unbounded growth
         val text = buffer.toString()
 
-        // Parse with current theme's color scheme
-        val parsed = AnsiParser.parse(text, TerminalThemes.forTheme(_colorTheme.value))
+        // Parse with current theme's color scheme, detecting clear-screen signals
+        val result = AnsiParser.parseWithMeta(text, TerminalThemes.forTheme(_colorTheme.value))
         buffer.clear()
 
+        val parsed = result.text
+        val base = if (result.clearScreen) AnnotatedString("") else (_outputs.value[sessionId] ?: AnnotatedString(""))
+
         // Append to session output, keeping max ~50000 chars of annotated string
-        val current = _outputs.value[sessionId] ?: AnnotatedString("")
         val combined = buildAnnotatedString {
-            // Trim from start if too long (keep last 50000 chars)
-            val startOffset = if (current.length + parsed.length > 50000) {
-                (current.length + parsed.length - 50000).coerceAtLeast(0)
+            val startOffset = if (base.length + parsed.length > 50000) {
+                (base.length + parsed.length - 50000).coerceAtLeast(0)
             } else 0
-            append(current.subSequence(startOffset, current.length))
+            append(base.subSequence(startOffset, base.length))
             append(parsed)
         }
 

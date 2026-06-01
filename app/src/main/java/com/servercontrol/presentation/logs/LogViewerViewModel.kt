@@ -105,6 +105,8 @@ class LogViewerViewModel @Inject constructor(
         viewModelScope.launch {
             getLogsUseCase(serverId, selectedSource.value, selectedUnit.value, lineCount.value)
                 .collect { result ->
+                    // Don't flash Loading state when we already have data (background refresh)
+                    if (result is Resource.Loading && _logs.value is Resource.Success) return@collect
                     _logs.value = result
                 }
         }

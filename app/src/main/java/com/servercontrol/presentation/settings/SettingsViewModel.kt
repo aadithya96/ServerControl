@@ -32,6 +32,8 @@ object SettingsKeys {
     val TELEGRAM_BOT_TOKEN = stringPreferencesKey("telegram_bot_token")
     val TELEGRAM_CHAT_ID = stringPreferencesKey("telegram_chat_id")
     val ALERT_NOTIFICATIONS = booleanPreferencesKey("alert_notifications")
+    val CPU_ALERT_ENABLED = booleanPreferencesKey("cpu_alert_enabled")
+    val DISK_ALERT_ENABLED = booleanPreferencesKey("disk_alert_enabled")
     val BIOMETRIC_LOCK = booleanPreferencesKey("biometric_lock")
     val VPN_DETECTION = booleanPreferencesKey("vpn_detection")
     val PROFILE_DISPLAY_NAME = stringPreferencesKey("profile_display_name")
@@ -50,6 +52,8 @@ data class SettingsUiState(
     val telegramBotToken: String = "",
     val telegramChatId: String = "",
     val alertNotificationsEnabled: Boolean = true,
+    val cpuAlertEnabled: Boolean = false,
+    val diskAlertEnabled: Boolean = false,
     val biometricLockEnabled: Boolean = false,
     val vpnDetectionEnabled: Boolean = false,
     val profileDisplayName: String = "Admin"
@@ -75,6 +79,8 @@ class SettingsViewModel @Inject constructor(
             telegramBotToken = prefs[SettingsKeys.TELEGRAM_BOT_TOKEN] ?: "",
             telegramChatId = prefs[SettingsKeys.TELEGRAM_CHAT_ID] ?: "",
             alertNotificationsEnabled = prefs[SettingsKeys.ALERT_NOTIFICATIONS] ?: true,
+            cpuAlertEnabled = prefs[SettingsKeys.CPU_ALERT_ENABLED] ?: false,
+            diskAlertEnabled = prefs[SettingsKeys.DISK_ALERT_ENABLED] ?: false,
             biometricLockEnabled = prefs[SettingsKeys.BIOMETRIC_LOCK] ?: false,
             vpnDetectionEnabled = prefs[SettingsKeys.VPN_DETECTION] ?: false,
             profileDisplayName = prefs[SettingsKeys.PROFILE_DISPLAY_NAME] ?: "Admin"
@@ -109,6 +115,8 @@ class SettingsViewModel @Inject constructor(
     fun setBackgroundMonitoringInterval(minutes: Int) = save { it[SettingsKeys.BG_INTERVAL] = minutes }
     fun setOnboardingDone(done: Boolean) = save { it[SettingsKeys.ONBOARDING_DONE] = done }
     fun setAlertNotificationsEnabled(enabled: Boolean) = save { it[SettingsKeys.ALERT_NOTIFICATIONS] = enabled }
+    fun setCpuAlertEnabled(enabled: Boolean) = save { it[SettingsKeys.CPU_ALERT_ENABLED] = enabled }
+    fun setDiskAlertEnabled(enabled: Boolean) = save { it[SettingsKeys.DISK_ALERT_ENABLED] = enabled }
     fun setBiometricLockEnabled(enabled: Boolean) = save { it[SettingsKeys.BIOMETRIC_LOCK] = enabled }
     fun setVpnDetectionEnabled(enabled: Boolean) = save { it[SettingsKeys.VPN_DETECTION] = enabled }
     fun setProfileDisplayName(name: String) = save { it[SettingsKeys.PROFILE_DISPLAY_NAME] = name }

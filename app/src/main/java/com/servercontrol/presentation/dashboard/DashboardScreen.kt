@@ -153,6 +153,9 @@ fun DashboardScreen(
                         DashboardContent(
                             stats = stats,
                             cpuHistory = cpuHistory,
+                            rxBytesPerSec = uiState.rxBytesPerSec,
+                            txBytesPerSec = uiState.txBytesPerSec,
+                            networkHistory = uiState.networkHistory,
                             onNavigateToProcesses = onNavigateToProcesses,
                             onNavigateToDisk = onNavigateToDisk,
                             onNavigateToFirewall = onNavigateToFirewall,
@@ -176,6 +179,9 @@ fun DashboardScreen(
 private fun DashboardContent(
     stats: SystemStats,
     cpuHistory: List<Float>,
+    rxBytesPerSec: Long = 0L,
+    txBytesPerSec: Long = 0L,
+    networkHistory: List<Pair<Long, Long>> = emptyList(),
     onNavigateToProcesses: () -> Unit,
     onNavigateToDisk: () -> Unit,
     onNavigateToFirewall: () -> Unit,
@@ -199,8 +205,8 @@ private fun DashboardContent(
         // 2. Resources – three radial gauges
         item { ResourcesCard(stats) }
 
-        // 3. Network throughput (sparkline with CPU history as proxy)
-        item { NetworkCard(cpuHistory) }
+        // 3. Network throughput
+        item { NetworkCard(rxBytesPerSec, txBytesPerSec, networkHistory) }
 
         // 4. Quick actions 3×2 grid
         item {
@@ -406,7 +412,11 @@ private fun RadialGauge(
 // ── Network throughput (sparklines) ───────────────────────────────────────────
 
 @Composable
-private fun NetworkCard(cpuHistory: List<Float>) {
+private fun NetworkCard(
+    rxBytesPerSec: Long,
+    txBytesPerSec: Long,
+    networkHistory: List<Pair<Long, Long>>
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
@@ -426,20 +436,26 @@ private fun NetworkCard(cpuHistory: List<Float>) {
                 NetworkWell(
                     label = "Inbound",
                     icon = Icons.Filled.South,
-                    value = "—",
-                    history = cpuHistory,
+                    value = if (rxBytesPerSec > 0) formatNetRate(rxBytesPerSec) else "—",
+                    history = networkHistory.map { it.first.toFloat() },
                     modifier = Modifier.weight(1f)
                 )
                 NetworkWell(
                     label = "Outbound",
                     icon = Icons.Filled.North,
-                    value = "—",
-                    history = cpuHistory.map { it * 0.6f },
+                    value = if (txBytesPerSec > 0) formatNetRate(txBytesPerSec) else "—",
+                    history = networkHistory.map { it.second.toFloat() },
                     modifier = Modifier.weight(1f)
                 )
             }
         }
     }
+}
+
+private fun formatNetRate(bps: Long): String = when {
+    bps >= 1_048_576L -> "${"%.1f".format(bps / 1_048_576f)} MB/s"
+    bps >= 1024L -> "${"%.1f".format(bps / 1024f)} KB/s"
+    else -> "$bps B/s"
 }
 
 @Composable

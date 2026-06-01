@@ -48,6 +48,18 @@ class StatsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getBandwidth(serverId: Long): Resource<List<BandwidthInfo>> {
+        val server = getServer(serverId) ?: return Resource.Error("Server not found")
+        return when (server.authType) {
+            AuthType.AGENT_TOKEN -> when (val result = agentDataSource.getBandwidth(server)) {
+                is Resource.Success -> Resource.Success(result.data.interfaces.map { it.toDomain() })
+                is Resource.Error -> Resource.Error(result.message, result.throwable)
+                is Resource.Loading -> Resource.Loading
+            }
+            else -> Resource.Error("Bandwidth requires agent connection")
+        }
+    }
+
     override suspend fun getProcesses(serverId: Long): Resource<List<Process>> {
         val server = getServer(serverId) ?: return Resource.Error("Server not found")
         return when (server.authType) {

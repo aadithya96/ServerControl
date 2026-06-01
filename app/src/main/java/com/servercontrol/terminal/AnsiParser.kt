@@ -8,6 +8,8 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 
+data class ParseResult(val text: AnnotatedString, val clearScreen: Boolean)
+
 object AnsiParser {
 
     private const val ESC = ""
@@ -15,13 +17,25 @@ object AnsiParser {
     // ESC sequence regex: ESC [ <params> <command>
     private val escapeRegex = Regex("${Regex.escape(ESC)}\\[([0-9;]*)([A-Za-z])")
 
-    fun parse(raw: String, colors: TerminalColorScheme = TerminalThemes.DARK): AnnotatedString {
-        // Strip clear screen / cursor reset sequences before parsing colour codes
+    fun parse(raw: String, colors: TerminalColorScheme = TerminalThemes.DARK): AnnotatedString =
+        parseWithMeta(raw, colors).text
+
+    fun parseWithMeta(raw: String, colors: TerminalColorScheme = TerminalThemes.DARK): ParseResult {
+        // Detect clear-screen before stripping sequences
+        val clearScreen = raw.contains("$ESC[2J") || raw.contains("$ESC[3J")
+
+        // Strip clear screen / cursor reset / cursor-movement sequences, normalize line endings
         val cleaned = raw
             .replace("$ESC[2J", "")
             .replace("$ESC[H", "")
             .replace("$ESC[3J", "")
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
 
+        return ParseResult(buildParsed(cleaned, colors), clearScreen)
+    }
+
+    private fun buildParsed(cleaned: String, colors: TerminalColorScheme): AnnotatedString {
         val ansiColors = mapOf(
             30 to colors.black,
             31 to colors.red,

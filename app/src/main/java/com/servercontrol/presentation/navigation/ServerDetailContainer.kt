@@ -36,6 +36,7 @@ import com.servercontrol.presentation.docker.DockerScreen
 import com.servercontrol.presentation.logs.LogViewerScreen
 import com.servercontrol.presentation.processes.ProcessListScreen
 import com.servercontrol.presentation.settings.SettingsScreen
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 
 private data class NavTab(
@@ -66,6 +67,7 @@ fun ServerDetailContainer(
     onNavigateToQuickCommands: () -> Unit,
     onNavigateToSecurity: () -> Unit,
     onNavigateToAgentInstaller: () -> Unit,
+    onReplayOnboarding: () -> Unit = {},
 ) {
     val innerNav = rememberNavController()
     val backEntry by innerNav.currentBackStackEntryAsState()
@@ -82,6 +84,7 @@ fun ServerDetailContainer(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                 tabs.forEach { tab ->
@@ -161,7 +164,10 @@ fun ServerDetailContainer(
                 )
             }
             composable("settings") {
-                SettingsScreen(onNavigateBack = { switchTab("monitor") })
+                SettingsScreen(
+                    onNavigateBack = { switchTab("monitor") },
+                    onReplayOnboarding = onReplayOnboarding
+                )
             }
         }
     }

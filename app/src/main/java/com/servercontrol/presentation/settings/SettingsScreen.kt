@@ -36,6 +36,7 @@ import com.servercontrol.presentation.theme.*
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onQrTransfer: () -> Unit = {},
+    onReplayOnboarding: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -141,15 +142,45 @@ fun SettingsScreen(
                         ),
                         SettingRowData(
                             icon = Icons.Filled.Memory,
+                            title = "CPU Alerts",
+                            trailing = {
+                                Switch(
+                                    checked = state.cpuAlertEnabled,
+                                    onCheckedChange = viewModel::setCpuAlertEnabled,
+                                    colors = SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedTrackColor = SC4
+                                    )
+                                )
+                            }
+                        ),
+                        SettingRowData(
+                            icon = Icons.Filled.Memory,
                             title = "CPU Alert Threshold",
                             trailingText = "${state.cpuAlertThreshold}%",
-                            onClick = { showCpuAlertDialog = true }
+                            enabled = state.cpuAlertEnabled,
+                            onClick = if (state.cpuAlertEnabled) ({ showCpuAlertDialog = true }) else null
+                        ),
+                        SettingRowData(
+                            icon = Icons.Filled.Storage,
+                            title = "Disk Alerts",
+                            trailing = {
+                                Switch(
+                                    checked = state.diskAlertEnabled,
+                                    onCheckedChange = viewModel::setDiskAlertEnabled,
+                                    colors = SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedTrackColor = SC4
+                                    )
+                                )
+                            }
                         ),
                         SettingRowData(
                             icon = Icons.Filled.Storage,
                             title = "Disk Alert Threshold",
                             trailingText = "${state.diskAlertThreshold}%",
-                            onClick = { showDiskAlertDialog = true }
+                            enabled = state.diskAlertEnabled,
+                            onClick = if (state.diskAlertEnabled) ({ showDiskAlertDialog = true }) else null
                         )
                     )
                 )
@@ -235,7 +266,7 @@ fun SettingsScreen(
                         .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    TextButton(onClick = { /* replay onboarding */ }) {
+                    TextButton(onClick = onReplayOnboarding) {
                         Text(
                             "Replay onboarding",
                             color = MaterialTheme.colorScheme.primary,
@@ -429,7 +460,8 @@ private data class SettingRowData(
     val title: String,
     val trailingText: String? = null,
     val onClick: (() -> Unit)? = null,
-    val trailing: (@Composable () -> Unit)? = null
+    val trailing: (@Composable () -> Unit)? = null,
+    val enabled: Boolean = true
 )
 
 @Composable
@@ -461,7 +493,7 @@ private fun SettingsSection(label: String, items: List<SettingRowData>) {
 
 @Composable
 private fun SettingRow(data: SettingRowData) {
-    if (data.onClick != null) {
+    if (data.onClick != null && data.enabled) {
         Surface(
             onClick = data.onClick,
             color = SC2,
@@ -476,6 +508,7 @@ private fun SettingRow(data: SettingRowData) {
 
 @Composable
 private fun SettingRowContent(data: SettingRowData) {
+    val contentAlpha = if (data.enabled) 1f else 0.38f
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -486,14 +519,16 @@ private fun SettingRowContent(data: SettingRowData) {
         Icon(
             data.icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
             modifier = Modifier.size(22.dp)
         )
         Text(
             data.title,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
         data.trailing?.invoke() ?: run {
             data.trailingText?.let { text ->
@@ -504,13 +539,13 @@ private fun SettingRowContent(data: SettingRowData) {
                     Text(
                         text,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
                     )
-                    if (data.onClick != null) {
+                    if (data.onClick != null && data.enabled) {
                         Icon(
                             Icons.Filled.ChevronRight,
                             null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
                             modifier = Modifier.size(18.dp)
                         )
                     }

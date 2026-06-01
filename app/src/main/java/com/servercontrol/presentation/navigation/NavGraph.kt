@@ -126,6 +126,12 @@ fun NavGraph() {
                 onNavigateToQuickCommands = { navController.navigate(Screen.QuickCommands.createRoute(serverId)) },
                 onNavigateToSecurity = { navController.navigate(Screen.Security.createRoute(serverId)) },
                 onNavigateToAgentInstaller = { navController.navigate(Screen.AgentInstaller.createRoute(serverId)) },
+                onReplayOnboarding = {
+                    settingsViewModel.setOnboardingDone(false)
+                    navController.navigate(Screen.Onboarding.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -172,7 +178,13 @@ fun NavGraph() {
         composable(Screen.Settings.route) {
             com.servercontrol.presentation.settings.SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onQrTransfer = { navController.navigate(Screen.QrScan.route) }
+                onQrTransfer = { navController.navigate(Screen.QrScan.route) },
+                onReplayOnboarding = {
+                    settingsViewModel.setOnboardingDone(false)
+                    navController.navigate(Screen.Onboarding.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 
