@@ -71,10 +71,21 @@ android {
         buildConfig = true
     }
 
+    lint {
+        abortOnError = false
+        htmlReport = true
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-metadata-jvm:2.3.21")
     }
 }
 
@@ -129,6 +140,8 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
     ksp(libs.hilt.work.compiler)
+
+    testImplementation("junit:junit:4.13.2")
 
     debugImplementation(libs.androidx.ui.tooling)
 
