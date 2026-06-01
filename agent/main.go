@@ -153,9 +153,20 @@ func main() {
 		http.NotFound(w, r)
 	})
 
+	// Outermost handler: CORS for all requests, plus optional per-IP rate limiting.
+	var rootHandler http.Handler = mux
+	if cfg.RateLimitPerSec > 0 {
+		rate := float64(cfg.RateLimitPerSec)
+		// Allow a short burst of 2x the sustained rate to absorb screen-load spikes.
+		limiter := middleware.NewRateLimiter(rate, rate*2)
+		limiter.StartCleanup(5*time.Minute, 10*time.Minute)
+		rootHandler = limiter.Middleware(rootHandler)
+		log.Printf("Rate limiting enabled: %d req/s per client IP", cfg.RateLimitPerSec)
+	}
+
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
-		Handler:      middleware.CORS(mux),
+		Handler:      middleware.CORS(rootHandler),
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  120 * time.Second,

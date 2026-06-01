@@ -32,6 +32,7 @@ Priority order: CLI flags > environment variables > `/etc/servercontrol/agent.co
 | `--tls-key` | `SC_TLS_KEY` | — | Path to TLS key |
 | `--log-level` | `SC_LOG_LEVEL` | `info` | Log verbosity |
 | `--metrics` | `SC_METRICS` | `false` | Enable Prometheus `/metrics` endpoint |
+| `--rate-limit` | `SC_RATE_LIMIT` | `30` | Max requests/sec per client IP (`0` disables) |
 
 ## API Endpoints
 

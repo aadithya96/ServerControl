@@ -6,16 +6,18 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
 type Config struct {
-	Port           string
-	Token          string
-	TLSCert        string
-	TLSKey         string
-	LogLevel       string
-	MetricsEnabled bool
+	Port            string
+	Token           string
+	TLSCert         string
+	TLSKey          string
+	LogLevel        string
+	MetricsEnabled  bool
+	RateLimitPerSec int
 }
 
 func loadConfig() *Config {
@@ -32,6 +34,8 @@ func loadConfig() *Config {
 	flag.StringVar(&cfg.LogLevel, "log-level", "", "Log level (debug, info, warn, error)")
 	var metricsFlag string
 	flag.StringVar(&metricsFlag, "metrics", "", "Enable Prometheus /metrics endpoint (true/false)")
+	var rateLimitFlag string
+	flag.StringVar(&rateLimitFlag, "rate-limit", "", "Max requests/sec per client IP (0 disables)")
 	flag.Parse()
 
 	// Apply defaults from file, then env, then CLI
@@ -54,6 +58,10 @@ func loadConfig() *Config {
 		metricsFlag = getEnvOrFileOrDefault("SC_METRICS", fileConfig["METRICS"], "false")
 	}
 	cfg.MetricsEnabled = parseBool(metricsFlag)
+	if rateLimitFlag == "" {
+		rateLimitFlag = getEnvOrFileOrDefault("SC_RATE_LIMIT", fileConfig["RATE_LIMIT"], "30")
+	}
+	cfg.RateLimitPerSec = parseIntOrDefault(rateLimitFlag, 30)
 
 	if cfg.Token == "" {
 		log.Fatal("ERROR: No auth token configured. Set --token, SC_TOKEN env var, or TOKEN= in /etc/servercontrol/agent.conf")
@@ -91,6 +99,14 @@ func loadConfigFile(path string) map[string]string {
 	return result
 }
 
+// parseIntOrDefault parses v as an int, returning def if it is empty or invalid.
+func parseIntOrDefault(v string, def int) int {
+	if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
+		return n
+	}
+	return def
+}
+
 // parseBool interprets common truthy strings ("true", "1", "yes", "on") case-insensitively.
 func parseBool(v string) bool {
 	switch strings.ToLower(strings.TrimSpace(v)) {
@@ -112,5 +128,5 @@ func getEnvOrFileOrDefault(envKey, fileVal, defaultVal string) string {
 }
 
 func (c *Config) String() string {
-	return fmt.Sprintf("port=%s logLevel=%s tlsCert=%s metrics=%t", c.Port, c.LogLevel, c.TLSCert, c.MetricsEnabled)
+	return fmt.Sprintf("port=%s logLevel=%s tlsCert=%s metrics=%t rateLimit=%d", c.Port, c.LogLevel, c.TLSCert, c.MetricsEnabled, c.RateLimitPerSec)
 }
