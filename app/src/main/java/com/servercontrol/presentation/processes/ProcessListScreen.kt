@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.servercontrol.domain.model.Process
 import com.servercontrol.domain.model.ProcessSortOrder
+import com.servercontrol.util.FormatUtils
 import com.servercontrol.presentation.components.ErrorState
 import com.servercontrol.presentation.components.LoadingSpinner
 import com.servercontrol.presentation.theme.*
@@ -401,14 +402,4 @@ private fun DetailRow(label: String, value: String) {
     }
 }
 
-private fun formatBytes(bytes: Long): String {
-    val kb = bytes / 1024.0
-    val mb = kb / 1024.0
-    val gb = mb / 1024.0
-    return when {
-        gb >= 1.0 -> "%.1f GB".format(gb)
-        mb >= 1.0 -> "%.1f MB".format(mb)
-        kb >= 1.0 -> "%.1f KB".format(kb)
-        else -> "$bytes B"
-    }
-}
+private fun formatBytes(bytes: Long): String = FormatUtils.formatBytes(bytes)

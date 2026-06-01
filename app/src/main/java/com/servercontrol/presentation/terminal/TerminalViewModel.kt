@@ -25,10 +25,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
 private val KEY_FONT_SIZE = intPreferencesKey("terminal_font_size")
 private val KEY_COLOR_THEME = stringPreferencesKey("terminal_theme")
+
+// Cap on the number of characters retained per terminal tab's scrollback buffer.
+private const val MAX_OUTPUT_CHARS = 50_000
 
 @HiltViewModel
 class TerminalViewModel @Inject constructor(
@@ -61,8 +65,10 @@ class TerminalViewModel @Inject constructor(
     private val collectionJobs = mutableMapOf<String, Job>()
     private var tabCounter = 0
 
-    // Buffer to accumulate partial ANSI sequences between chunks
-    private val rawBuffers = mutableMapOf<String, StringBuilder>()
+    // Buffer to accumulate partial ANSI sequences between chunks. Written from the
+    // IO reader job and read/written from main-dispatcher coroutines, so it must be
+    // a concurrent map to avoid ConcurrentModificationException / lost data.
+    private val rawBuffers = ConcurrentHashMap<String, StringBuilder>()
 
     init {
         // Load persisted preferences, then open first tab
@@ -94,7 +100,7 @@ class TerminalViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val profile = serverRepository.getServerById(serverId) ?: run {
                 setSessionState(session.id, SessionState.ERROR)
-                appendOutput(session.id, "\r\n[Error: Server profile not found]\r\n")
+                appendRawText(session.id, "\r\n[Error: Server profile not found]\r\n")
                 return@launch
             }
 
@@ -103,7 +109,7 @@ class TerminalViewModel @Inject constructor(
 
             if (result.isFailure) {
                 setSessionState(session.id, SessionState.ERROR)
-                appendOutput(
+                appendRawText(
                     session.id,
                     "\r\n[Connection failed: ${result.exceptionOrNull()?.message}]\r\n"
                 )
@@ -140,29 +146,31 @@ class TerminalViewModel @Inject constructor(
         val parsed = result.text
         val base = if (result.clearScreen) AnnotatedString("") else (_outputs.value[sessionId] ?: AnnotatedString(""))
 
-        // Append to session output, keeping max ~50000 chars of annotated string
+        // Append to session output, keeping at most MAX_OUTPUT_CHARS of annotated string
         val combined = buildAnnotatedString {
-            val startOffset = if (base.length + parsed.length > 50000) {
-                (base.length + parsed.length - 50000).coerceAtLeast(0)
+            val startOffset = if (base.length + parsed.length > MAX_OUTPUT_CHARS) {
+                (base.length + parsed.length - MAX_OUTPUT_CHARS).coerceAtLeast(0)
             } else 0
             append(base.subSequence(startOffset, base.length))
             append(parsed)
         }
 
-        _outputs.value = _outputs.value.toMutableMap().also { it[sessionId] = combined }
+        _outputs.value = _outputs.value + (sessionId to combined)
     }
 
-    private fun appendOutput(sessionId: String, text: String) {
+    // Appends plain text directly to a session's output without ANSI parsing.
+    // Used for locally-generated status messages (errors, connection notices).
+    private fun appendRawText(sessionId: String, text: String) {
         val current = _outputs.value[sessionId] ?: AnnotatedString("")
         val combined = buildAnnotatedString {
             append(current)
             append(text)
         }
-        _outputs.value = _outputs.value.toMutableMap().also { it[sessionId] = combined }
+        _outputs.value = _outputs.value + (sessionId to combined)
     }
 
     private fun setSessionState(sessionId: String, state: SessionState) {
-        _sessionStates.value = _sessionStates.value.toMutableMap().also { it[sessionId] = state }
+        _sessionStates.value = _sessionStates.value + (sessionId to state)
     }
 
     fun closeTab(sessionId: String) {
@@ -172,10 +180,8 @@ class TerminalViewModel @Inject constructor(
 
         val newTabs = _tabs.value.filter { it.id != sessionId }
         _tabs.value = newTabs
-        val newOutputs = _outputs.value.toMutableMap().also { it.remove(sessionId) }
-        _outputs.value = newOutputs
-        val newStates = _sessionStates.value.toMutableMap().also { it.remove(sessionId) }
-        _sessionStates.value = newStates
+        _outputs.value = _outputs.value - sessionId
+        _sessionStates.value = _sessionStates.value - sessionId
 
         if (_activeTabId.value == sessionId) {
             _activeTabId.value = newTabs.lastOrNull()?.id
@@ -225,7 +231,7 @@ class TerminalViewModel @Inject constructor(
         terminalManager.closeSession(sessionId)
         setSessionState(sessionId, SessionState.CONNECTING)
         // Clear output for this tab
-        _outputs.value = _outputs.value.toMutableMap().also { it[sessionId] = AnnotatedString("") }
+        _outputs.value = _outputs.value + (sessionId to AnnotatedString(""))
         connectSession(session)
     }
 

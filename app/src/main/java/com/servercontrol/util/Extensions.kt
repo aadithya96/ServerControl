@@ -21,16 +21,6 @@ fun Long.toReadableUptime(): String {
     }
 }
 
-fun Long.toReadableBytes(): String {
-    val kb = this / 1024.0
-    val mb = kb / 1024.0
-    val gb = mb / 1024.0
-    return when {
-        gb >= 1.0 -> "%.1f GB".format(gb)
-        mb >= 1.0 -> "%.1f MB".format(mb)
-        kb >= 1.0 -> "%.1f KB".format(kb)
-        else -> "$this B"
-    }
-}
+fun Long.toReadableBytes(): String = FormatUtils.formatBytes(this)
 
 fun Double.toPercentString(): String = "%.1f%%".format(this)

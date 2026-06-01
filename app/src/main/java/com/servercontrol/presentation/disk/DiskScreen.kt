@@ -21,6 +21,7 @@ import com.servercontrol.domain.model.DiskInfo
 import com.servercontrol.presentation.components.ErrorState
 import com.servercontrol.presentation.components.LoadingSpinner
 import com.servercontrol.presentation.components.SectionHeader
+import com.servercontrol.util.FormatUtils
 import com.servercontrol.presentation.theme.CpuCritical
 import com.servercontrol.presentation.theme.CpuGood
 import com.servercontrol.presentation.theme.CpuWarn
@@ -226,16 +227,4 @@ private fun DiskCard(disk: DiskInfo) {
     }
 }
 
-fun formatBytes(bytes: Long): String {
-    val kb = bytes / 1024.0
-    val mb = kb / 1024.0
-    val gb = mb / 1024.0
-    val tb = gb / 1024.0
-    return when {
-        tb >= 1.0 -> "%.2f TB".format(tb)
-        gb >= 1.0 -> "%.1f GB".format(gb)
-        mb >= 1.0 -> "%.1f MB".format(mb)
-        kb >= 1.0 -> "%.1f KB".format(kb)
-        else -> "$bytes B"
-    }
-}
+fun formatBytes(bytes: Long): String = FormatUtils.formatBytes(bytes)
