@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -33,6 +34,7 @@ import com.servercontrol.util.Resource
 fun AddServerScreen(
     onNavigateBack: () -> Unit,
     onNavigateToInstaller: (Long) -> Unit = {},
+    onScanQr: () -> Unit = {},
     viewModel: AddServerViewModel = hiltViewModel()
 ) {
     val saveState by viewModel.saveState.collectAsState()
@@ -82,6 +84,15 @@ fun AddServerScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onScanQr) {
+                        Icon(
+                            Icons.Default.QrCodeScanner,
+                            contentDescription = "Scan QR code",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             )

@@ -149,6 +149,9 @@ dependencies {
     implementation("androidx.glance:glance-appwidget:1.0.0")
     implementation("androidx.glance:glance-material3:1.0.0")
 
+    // Biometric authentication
+    implementation("androidx.biometric:biometric:1.1.0")
+
     // ZXing QR code generation
     implementation("com.google.zxing:core:3.5.2")
 

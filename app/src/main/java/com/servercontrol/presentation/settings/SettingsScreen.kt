@@ -109,12 +109,6 @@ fun SettingsScreen(
                                     )
                                 )
                             }
-                        ),
-                        SettingRowData(
-                            icon = Icons.Filled.QrCode2,
-                            title = "QR Transfer",
-                            trailingText = "Tap to share",
-                            onClick = onQrTransfer
                         )
                     )
                 )
@@ -255,109 +249,121 @@ fun SettingsScreen(
     }
 
     if (showRefreshDialog) {
-        AlertDialog(
-            onDismissRequest = { showRefreshDialog = false },
-            title = { Text("Refresh Interval") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(2 to "2 s", 5 to "5 s", 10 to "10 s", 30 to "30 s")
-                        .forEach { (secs, label) ->
-                            val selected = state.refreshInterval == secs
-                            Surface(
-                                onClick = { viewModel.setRefreshInterval(secs); showRefreshDialog = false },
-                                shape = MaterialTheme.shapes.medium,
-                                color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (selected) MaterialTheme.colorScheme.secondary else OutlineVariant
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    label,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                                    color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
-                                            else MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-                                )
-                            }
-                        }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showRefreshDialog = false }) { Text("Close") }
+        ModalBottomSheet(onDismissRequest = { showRefreshDialog = false }) {
+            PickerSheetContent(
+                title = "Refresh Interval",
+                onDismiss = { showRefreshDialog = false }
+            ) {
+                listOf(2 to "2 seconds", 5 to "5 seconds", 10 to "10 seconds", 30 to "30 seconds")
+                    .forEach { (secs, label) ->
+                        val selected = state.refreshInterval == secs
+                        PickerOption(
+                            label = label,
+                            selected = selected,
+                            onClick = { viewModel.setRefreshInterval(secs); showRefreshDialog = false }
+                        )
+                    }
             }
-        )
+        }
     }
 
     if (showCpuAlertDialog) {
-        AlertDialog(
-            onDismissRequest = { showCpuAlertDialog = false },
-            title = { Text("CPU Alert Threshold") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(50, 70, 80, 90).forEach { pct ->
-                        val selected = state.cpuAlertThreshold == pct
-                        Surface(
-                            onClick = { viewModel.setCpuAlertThreshold(pct); showCpuAlertDialog = false },
-                            shape = MaterialTheme.shapes.medium,
-                            color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(
-                                1.dp,
-                                if (selected) MaterialTheme.colorScheme.secondary else OutlineVariant
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                "$pct%",
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                                color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
-                                        else MaterialTheme.colorScheme.onSurface,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                        }
-                    }
+        ModalBottomSheet(onDismissRequest = { showCpuAlertDialog = false }) {
+            PickerSheetContent(
+                title = "CPU Alert Threshold",
+                onDismiss = { showCpuAlertDialog = false }
+            ) {
+                listOf(50, 70, 80, 90).forEach { pct ->
+                    val selected = state.cpuAlertThreshold == pct
+                    PickerOption(
+                        label = "$pct%",
+                        selected = selected,
+                        onClick = { viewModel.setCpuAlertThreshold(pct); showCpuAlertDialog = false }
+                    )
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showCpuAlertDialog = false }) { Text("Close") }
             }
-        )
+        }
     }
 
     if (showDiskAlertDialog) {
-        AlertDialog(
-            onDismissRequest = { showDiskAlertDialog = false },
-            title = { Text("Disk Alert Threshold") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(70, 80, 90, 95).forEach { pct ->
-                        val selected = state.diskAlertThreshold == pct
-                        Surface(
-                            onClick = { viewModel.setDiskAlertThreshold(pct); showDiskAlertDialog = false },
-                            shape = MaterialTheme.shapes.medium,
-                            color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(
-                                1.dp,
-                                if (selected) MaterialTheme.colorScheme.secondary else OutlineVariant
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                "$pct%",
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                                color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
-                                        else MaterialTheme.colorScheme.onSurface,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                        }
-                    }
+        ModalBottomSheet(onDismissRequest = { showDiskAlertDialog = false }) {
+            PickerSheetContent(
+                title = "Disk Alert Threshold",
+                onDismiss = { showDiskAlertDialog = false }
+            ) {
+                listOf(70, 80, 90, 95).forEach { pct ->
+                    val selected = state.diskAlertThreshold == pct
+                    PickerOption(
+                        label = "$pct%",
+                        selected = selected,
+                        onClick = { viewModel.setDiskAlertThreshold(pct); showDiskAlertDialog = false }
+                    )
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showDiskAlertDialog = false }) { Text("Close") }
             }
-        )
+        }
+    }
+}
+
+@Composable
+private fun PickerSheetContent(
+    title: String,
+    onDismiss: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            TextButton(onClick = onDismiss) { Text("Done") }
+        }
+        content()
+    }
+}
+
+@Composable
+private fun PickerOption(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(
+            1.dp,
+            if (selected) MaterialTheme.colorScheme.secondary else OutlineVariant
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                label,
+                color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                        else MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            if (selected) {
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
     }
 }
 
