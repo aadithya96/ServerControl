@@ -102,7 +102,7 @@ jobs:
 
       - name: Download release checksums to verify
         run: |
-          gh release download ${{ github.ref_name }} --pattern SHA256SUMS.txt --dir /tmp/verify
+          gh release download ${{ github.ref_name }} --pattern SHA256SUMS.txt --dir /tmp/verify --clobber
           echo "Checksums from release:"
           cat /tmp/verify/SHA256SUMS.txt
         env:
