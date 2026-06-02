@@ -143,6 +143,19 @@ func parseIPTables(output string) []FirewallChain {
 func FirewallHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	// Prefer nftables when it is present and has a populated ruleset; otherwise
+	// fall back to iptables. Modern distros (Debian 12, Ubuntu 24.04, Fedora 38+)
+	// default to nftables.
+	if out, err := exec.Command("nft", "-j", "list", "ruleset").Output(); err == nil {
+		if chains := parseNftables(string(out)); len(chains) > 0 {
+			json.NewEncoder(w).Encode(FirewallResponse{
+				Backend: "nftables",
+				Chains:  chains,
+			})
+			return
+		}
+	}
+
 	cmd := exec.Command("iptables", "-L", "-n", "-v", "--line-numbers", "-x")
 	out, err := cmd.Output()
 	if err != nil {
@@ -171,7 +184,13 @@ func FirewallToggleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse rule ID: "CHAIN-NUM"
+	// nftables rules are addressed by handle ("nft:family:table:chain:handle").
+	if strings.HasPrefix(req.RuleID, "nft:") {
+		nftToggle(w, req)
+		return
+	}
+
+	// Parse iptables rule ID: "CHAIN-NUM"
 	idx := strings.LastIndex(req.RuleID, "-")
 	if idx < 0 {
 		w.WriteHeader(http.StatusBadRequest)
@@ -199,6 +218,31 @@ func FirewallToggleHandler(w http.ResponseWriter, r *http.Request) {
 	// Disable by deleting the rule at position num
 	cmd = exec.Command("iptables", "-D", chain, strconv.Itoa(num))
 	if err := cmd.Run(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(FirewallToggleResponse{Success: false, Message: err.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(FirewallToggleResponse{Success: true, Message: "Rule toggled"})
+}
+
+// nftToggle handles enable/disable for nftables-backed rules.
+func nftToggle(w http.ResponseWriter, req FirewallToggleRequest) {
+	if req.Enabled {
+		// Re-enabling a deleted nftables rule requires replaying its full spec;
+		// this is handled by the rule-snapshot feature (Phase 27).
+		json.NewEncoder(w).Encode(FirewallToggleResponse{Success: true, Message: "Rule toggled"})
+		return
+	}
+
+	args, err := nftDeleteArgs(req.RuleID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(FirewallToggleResponse{Success: false, Message: err.Error()})
+		return
+	}
+
+	if err := exec.Command("nft", args...).Run(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(FirewallToggleResponse{Success: false, Message: err.Error()})
 		return

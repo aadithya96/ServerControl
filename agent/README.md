@@ -81,7 +81,7 @@ All endpoints (except `/health` and `/metrics`) require `Authorization: Bearer <
 | GET | `/api/v1/disk` | Disk mounts and I/O stats |
 | GET | `/api/v1/connections?proto=all` | Network connections |
 | GET | `/api/v1/bandwidth` | Per-interface RX/TX bytes-per-second |
-| GET | `/api/v1/firewall` | iptables rules |
+| GET | `/api/v1/firewall` | Firewall rules (auto-detects nftables, falls back to iptables) |
 | DELETE | `/api/v1/process/{pid}?signal=9` | Kill a process |
 | POST | `/api/v1/firewall/toggle` | Toggle a firewall rule |
 | POST | `/api/v1/agent/update` | Self-update to latest release (only when `--self-update` enabled) |
@@ -89,5 +89,5 @@ All endpoints (except `/health` and `/metrics`) require `Authorization: Bearer <
 ## Requirements
 
 - Linux (reads `/proc` filesystem)
-- Root privileges for iptables access
+- Root privileges for nftables/iptables access
 - systemd (for service management)
