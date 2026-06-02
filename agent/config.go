@@ -11,13 +11,15 @@ import (
 )
 
 type Config struct {
-	Port            string
-	Token           string
-	TLSCert         string
-	TLSKey          string
-	LogLevel        string
-	MetricsEnabled  bool
-	RateLimitPerSec int
+	Port              string
+	Token             string
+	TLSCert           string
+	TLSKey            string
+	LogLevel          string
+	MetricsEnabled    bool
+	RateLimitPerSec   int
+	SelfUpdateEnabled bool
+	SelfUpdateURL     string
 }
 
 const configFilePath = "/etc/servercontrol/agent.conf"
@@ -38,6 +40,9 @@ func loadConfig() *Config {
 	flag.StringVar(&metricsFlag, "metrics", "", "Enable Prometheus /metrics endpoint (true/false)")
 	var rateLimitFlag string
 	flag.StringVar(&rateLimitFlag, "rate-limit", "", "Max requests/sec per client IP (0 disables)")
+	var selfUpdateFlag string
+	flag.StringVar(&selfUpdateFlag, "self-update", "", "Enable POST /api/v1/agent/update self-update endpoint (true/false)")
+	flag.StringVar(&cfg.SelfUpdateURL, "update-url", "", "Base URL to download release binaries + SHA256SUMS.txt from")
 	flag.Parse()
 
 	// Apply defaults from file, then env, then CLI
@@ -64,6 +69,14 @@ func loadConfig() *Config {
 		rateLimitFlag = getEnvOrFileOrDefault("SC_RATE_LIMIT", fileConfig["RATE_LIMIT"], "30")
 	}
 	cfg.RateLimitPerSec = parseIntOrDefault(rateLimitFlag, 30)
+	if selfUpdateFlag == "" {
+		selfUpdateFlag = getEnvOrFileOrDefault("SC_SELF_UPDATE", fileConfig["SELF_UPDATE"], "false")
+	}
+	cfg.SelfUpdateEnabled = parseBool(selfUpdateFlag)
+	if cfg.SelfUpdateURL == "" {
+		cfg.SelfUpdateURL = getEnvOrFileOrDefault("SC_UPDATE_URL", fileConfig["UPDATE_URL"],
+			"https://github.com/aadithya96/ServerControl/releases/latest/download")
+	}
 
 	if cfg.Token == "" {
 		slog.Error("no auth token configured; set --token, SC_TOKEN env var, or TOKEN= in /etc/servercontrol/agent.conf")
@@ -150,5 +163,5 @@ func getEnvOrFileOrDefault(envKey, fileVal, defaultVal string) string {
 }
 
 func (c *Config) String() string {
-	return fmt.Sprintf("port=%s logLevel=%s tlsCert=%s metrics=%t rateLimit=%d", c.Port, c.LogLevel, c.TLSCert, c.MetricsEnabled, c.RateLimitPerSec)
+	return fmt.Sprintf("port=%s logLevel=%s tlsCert=%s metrics=%t rateLimit=%d selfUpdate=%t", c.Port, c.LogLevel, c.TLSCert, c.MetricsEnabled, c.RateLimitPerSec, c.SelfUpdateEnabled)
 }

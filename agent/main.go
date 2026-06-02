@@ -142,6 +142,19 @@ func main() {
 	apiMux.HandleFunc("/api/v1/security/ssl", handlers.SslCertHandler)
 	apiMux.HandleFunc("/api/v1/security/block-ip", handlers.BlockIpHandler)
 
+	// Self-update endpoint — opt-in, off by default (remote-code-update surface).
+	if cfg.SelfUpdateEnabled {
+		updateHandler := selfUpdateHandler(cfg.SelfUpdateURL)
+		apiMux.HandleFunc("/api/v1/agent/update", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost {
+				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+				return
+			}
+			updateHandler(w, r)
+		})
+		slog.Warn("self-update endpoint enabled", "url", cfg.SelfUpdateURL)
+	}
+
 	// Token is held atomically so it can be hot-swapped on SIGHUP.
 	var tokenHolder atomic.Pointer[string]
 	tokenHolder.Store(&cfg.Token)

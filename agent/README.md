@@ -33,6 +33,8 @@ Priority order: CLI flags > environment variables > `/etc/servercontrol/agent.co
 | `--log-level` | `SC_LOG_LEVEL` | `info` | Log verbosity |
 | `--metrics` | `SC_METRICS` | `false` | Enable Prometheus `/metrics` endpoint |
 | `--rate-limit` | `SC_RATE_LIMIT` | `30` | Max requests/sec per client IP (`0` disables) |
+| `--self-update` | `SC_SELF_UPDATE` | `false` | Enable `POST /api/v1/agent/update` self-update endpoint |
+| `--update-url` | `SC_UPDATE_URL` | GitHub latest release | Base URL for release binaries + `SHA256SUMS.txt` |
 
 ## Logging
 
@@ -47,6 +49,24 @@ Send `SIGHUP` (e.g. `systemctl reload servercontrol-agent` or `kill -HUP <pid>`)
 to hot-reload the **auth token** and **log level** from the config file/env
 without restarting the listener or dropping connections. Other settings (port,
 TLS, metrics, rate limit) require a full restart.
+
+## Self-update (opt-in)
+
+When enabled with `--self-update`, an authenticated client can POST to
+`/api/v1/agent/update` to upgrade the agent to the latest release:
+
+1. Downloads `SHA256SUMS.txt` and the binary for the running OS/arch from
+   `--update-url` (**HTTPS required** — plain HTTP is rejected).
+2. Verifies the binary's SHA-256 against the checksums file. A mismatch aborts
+   the update; nothing is installed.
+3. Atomically replaces the running binary and re-execs in place (same PID, so
+   systemd keeps tracking the service).
+
+It is **disabled by default** and always sits behind bearer auth. Note: the
+shipped systemd unit sets `ProtectSystem=strict`, which makes `/usr` read-only —
+self-update will fail to replace a binary under `/usr/local/bin` unless you add
+its directory to `ReadWritePaths=` (this trade-off weakens hardening, so enable
+self-update deliberately).
 
 ## API Endpoints
 
@@ -64,6 +84,7 @@ All endpoints (except `/health` and `/metrics`) require `Authorization: Bearer <
 | GET | `/api/v1/firewall` | iptables rules |
 | DELETE | `/api/v1/process/{pid}?signal=9` | Kill a process |
 | POST | `/api/v1/firewall/toggle` | Toggle a firewall rule |
+| POST | `/api/v1/agent/update` | Self-update to latest release (only when `--self-update` enabled) |
 
 ## Requirements
 
