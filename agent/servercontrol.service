@@ -8,6 +8,8 @@ Type=simple
 User=root
 EnvironmentFile=/etc/servercontrol/agent.conf
 ExecStart=/usr/local/bin/servercontrol-agent
+# Reload hot-reloadable config (token, log level) without a restart.
+ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartSec=5s
 StandardOutput=journal

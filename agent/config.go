@@ -20,11 +20,13 @@ type Config struct {
 	RateLimitPerSec int
 }
 
+const configFilePath = "/etc/servercontrol/agent.conf"
+
 func loadConfig() *Config {
 	cfg := &Config{}
 
 	// Load from config file first
-	fileConfig := loadConfigFile("/etc/servercontrol/agent.conf")
+	fileConfig := loadConfigFile(configFilePath)
 
 	// CLI flags (highest priority)
 	flag.StringVar(&cfg.Port, "port", "", "Port to listen on")
@@ -98,6 +100,25 @@ func loadConfigFile(path string) map[string]string {
 		}
 	}
 	return result
+}
+
+// ReloadableConfig holds the subset of configuration that can be hot-applied on
+// SIGHUP without restarting the HTTP listener.
+type ReloadableConfig struct {
+	Token    string
+	LogLevel string
+}
+
+// loadReloadableConfig re-reads the hot-reloadable fields from the given config
+// file path and environment. CLI flags are process-lifetime and intentionally
+// not re-evaluated here. An empty Token means "no token found in file/env" and
+// callers should preserve the existing one rather than clearing it.
+func loadReloadableConfig(path string) ReloadableConfig {
+	fileConfig := loadConfigFile(path)
+	return ReloadableConfig{
+		Token:    getEnvOrFileOrDefault("SC_TOKEN", fileConfig["TOKEN"], ""),
+		LogLevel: getEnvOrFileOrDefault("SC_LOG_LEVEL", fileConfig["LOG_LEVEL"], "info"),
+	}
 }
 
 // parseIntOrDefault parses v as an int, returning def if it is empty or invalid.

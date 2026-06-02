@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -141,10 +142,14 @@ func main() {
 	apiMux.HandleFunc("/api/v1/security/ssl", handlers.SslCertHandler)
 	apiMux.HandleFunc("/api/v1/security/block-ip", handlers.BlockIpHandler)
 
+	// Token is held atomically so it can be hot-swapped on SIGHUP.
+	var tokenHolder atomic.Pointer[string]
+	tokenHolder.Store(&cfg.Token)
+
 	// Wrap API with auth + CORS + logging
 	protectedAPI := middleware.Chain(apiMux,
 		middleware.CORS,
-		middleware.BearerAuth(cfg.Token),
+		middleware.BearerAuthFunc(func() string { return *tokenHolder.Load() }),
 		middleware.Logging,
 	)
 
@@ -179,6 +184,26 @@ func main() {
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// Graceful config reload on SIGHUP: re-read the token and log level from the
+	// config file/env and hot-apply them without restarting the listener.
+	hup := make(chan os.Signal, 1)
+	signal.Notify(hup, syscall.SIGHUP)
+	go func() {
+		for range hup {
+			rc := loadReloadableConfig(configFilePath)
+			setupLogger(rc.LogLevel)
+			tokenChanged := false
+			if rc.Token != "" && rc.Token != *tokenHolder.Load() {
+				tokenHolder.Store(&rc.Token)
+				tokenChanged = true
+			}
+			slog.Info("config reloaded via SIGHUP",
+				"log_level", rc.LogLevel,
+				"token_changed", tokenChanged,
+			)
+		}
+	}()
 
 	go func() {
 		var err error

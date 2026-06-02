@@ -41,6 +41,13 @@ The agent emits structured JSON logs to stdout (one object per line) via Go's
 logs include `method`, `path`, `status`, and `duration_ms`. Use `--log-level`
 (`debug`/`info`/`warn`/`error`) to control verbosity.
 
+## Reloading config (SIGHUP)
+
+Send `SIGHUP` (e.g. `systemctl reload servercontrol-agent` or `kill -HUP <pid>`)
+to hot-reload the **auth token** and **log level** from the config file/env
+without restarting the listener or dropping connections. Other settings (port,
+TLS, metrics, rate limit) require a full restart.
+
 ## API Endpoints
 
 All endpoints (except `/health` and `/metrics`) require `Authorization: Bearer <token>`.
