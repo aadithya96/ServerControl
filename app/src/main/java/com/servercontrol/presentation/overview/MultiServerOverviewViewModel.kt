@@ -3,6 +3,7 @@ package com.servercontrol.presentation.overview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.servercontrol.data.remote.agent.AgentDataSource
+import com.servercontrol.data.remote.dto.toDomain
 import com.servercontrol.data.remote.ssh.SshDataSource
 import com.servercontrol.domain.model.AuthType
 import com.servercontrol.domain.model.ServerProfile
@@ -73,23 +74,7 @@ class MultiServerOverviewViewModel @Inject constructor(
         val result: Resource<SystemStats> = try {
             if (server.authType == AuthType.AGENT_TOKEN) {
                 when (val r = agentDataSource.getStats(server)) {
-                    is Resource.Success -> {
-                        val dto = r.data
-                        Resource.Success(SystemStats(
-                            hostname = dto.hostname,
-                            uptimeSeconds = dto.uptimeSeconds,
-                            loadAvg1m = dto.loadAvg1,
-                            loadAvg5m = dto.loadAvg5,
-                            loadAvg15m = dto.loadAvg15,
-                            cpuPercent = dto.cpuPercent,
-                            cpuCores = dto.cpuCores,
-                            memTotalBytes = dto.memTotalBytes,
-                            memUsedBytes = dto.memUsedBytes,
-                            memFreeBytes = dto.memFreeBytes,
-                            swapTotalBytes = dto.swapTotalBytes,
-                            swapUsedBytes = dto.swapUsedBytes
-                        ))
-                    }
+                    is Resource.Success -> Resource.Success(r.data.toDomain())
                     is Resource.Error -> Resource.Error(r.message)
                     is Resource.Loading -> Resource.Loading
                 }

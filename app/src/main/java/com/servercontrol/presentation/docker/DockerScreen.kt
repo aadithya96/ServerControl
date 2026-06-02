@@ -31,6 +31,7 @@ import com.servercontrol.domain.model.DockerImage
 import com.servercontrol.presentation.components.ServerStatus
 import com.servercontrol.presentation.components.StatusChip
 import com.servercontrol.presentation.theme.*
+import com.servercontrol.util.FormatUtils
 import com.servercontrol.util.Resource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -487,14 +488,4 @@ private fun ContainerDetailBottomSheet(
     }
 }
 
-private fun formatBytes(bytes: Long): String {
-    val kb = bytes / 1024.0
-    val mb = kb / 1024.0
-    val gb = mb / 1024.0
-    return when {
-        gb >= 1.0 -> "%.1f GB".format(gb)
-        mb >= 1.0 -> "%.1f MB".format(mb)
-        kb >= 1.0 -> "%.1f KB".format(kb)
-        else -> "$bytes B"
-    }
-}
+private fun formatBytes(bytes: Long): String = FormatUtils.formatBytes(bytes)

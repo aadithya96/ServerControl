@@ -7,10 +7,13 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.servercontrol.data.remote.WebhookService
+import com.servercontrol.worker.WorkerScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -62,7 +65,8 @@ data class SettingsUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val dataStore: DataStore<Preferences>,
-    private val webhookService: WebhookService
+    private val webhookService: WebhookService,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     val uiState: StateFlow<SettingsUiState> = dataStore.data.map { prefs ->
@@ -111,7 +115,19 @@ class SettingsViewModel @Inject constructor(
     fun setRefreshInterval(secs: Int) = save { it[SettingsKeys.REFRESH_INTERVAL] = secs }
     fun setCpuAlertThreshold(value: Int) = save { it[SettingsKeys.CPU_ALERT] = value }
     fun setDiskAlertThreshold(value: Int) = save { it[SettingsKeys.DISK_ALERT] = value }
-    fun setBackgroundMonitoringEnabled(enabled: Boolean) = save { it[SettingsKeys.BG_MONITORING] = enabled }
+    fun setBackgroundMonitoringEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            val intervalMinutes = (dataStore.data.first()[SettingsKeys.BG_INTERVAL] ?: 15).toLong()
+            dataStore.edit { it[SettingsKeys.BG_MONITORING] = enabled }
+            if (enabled) {
+                WorkerScheduler.scheduleAll(context, intervalMinutes)
+            } else {
+                WorkerScheduler.cancelAll(context)
+                // Widget updater keeps running even without full bg monitoring.
+                WorkerScheduler.scheduleWidgetUpdater(context)
+            }
+        }
+    }
     fun setBackgroundMonitoringInterval(minutes: Int) = save { it[SettingsKeys.BG_INTERVAL] = minutes }
     fun setOnboardingDone(done: Boolean) = save { it[SettingsKeys.ONBOARDING_DONE] = done }
     fun setAlertNotificationsEnabled(enabled: Boolean) = save { it[SettingsKeys.ALERT_NOTIFICATIONS] = enabled }

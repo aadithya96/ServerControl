@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -17,27 +17,29 @@ import (
 
 const version = "1.0.0"
 
-type HealthResponse struct {
-	Status  string `json:"status"`
-	Version string `json:"version"`
-}
-
 func main() {
+	// Preliminary logger so config errors are emitted as structured JSON too.
+	setupLogger("info")
 	cfg := loadConfig()
+	setupLogger(cfg.LogLevel)
 
-	log.SetOutput(os.Stdout)
-	log.SetFlags(log.LstdFlags | log.Lmsgprefix)
-	log.SetPrefix("[servercontrol-agent] ")
-	log.Printf("Starting agent version %s on port %s", version, cfg.Port)
-	log.Printf("Config: %s", cfg.String())
+	slog.Info("starting agent", "port", cfg.Port, "log_level", cfg.LogLevel)
+	slog.Info("config loaded",
+		"metrics_enabled", cfg.MetricsEnabled,
+		"rate_limit_per_sec", cfg.RateLimitPerSec,
+		"tls", cfg.TLSCert != "",
+	)
 
 	mux := http.NewServeMux()
 
 	// Health endpoint — no auth
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(HealthResponse{Status: "ok", Version: version})
-	})
+	mux.HandleFunc("/health", healthHandler)
+
+	// Optional Prometheus metrics endpoint — no auth, off by default
+	if cfg.MetricsEnabled {
+		mux.HandleFunc("/metrics", metricsHandler)
+		slog.Info("prometheus metrics endpoint enabled", "path", "/metrics")
+	}
 
 	// Auth-protected API router
 	apiMux := http.NewServeMux()
@@ -140,10 +142,27 @@ func main() {
 	apiMux.HandleFunc("/api/v1/security/ssl", handlers.SslCertHandler)
 	apiMux.HandleFunc("/api/v1/security/block-ip", handlers.BlockIpHandler)
 
+	// Self-update endpoint — opt-in, off by default (remote-code-update surface).
+	if cfg.SelfUpdateEnabled {
+		updateHandler := selfUpdateHandler(cfg.SelfUpdateURL)
+		apiMux.HandleFunc("/api/v1/agent/update", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost {
+				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+				return
+			}
+			updateHandler(w, r)
+		})
+		slog.Warn("self-update endpoint enabled", "url", cfg.SelfUpdateURL)
+	}
+
+	// Token is held atomically so it can be hot-swapped on SIGHUP.
+	var tokenHolder atomic.Pointer[string]
+	tokenHolder.Store(&cfg.Token)
+
 	// Wrap API with auth + CORS + logging
 	protectedAPI := middleware.Chain(apiMux,
 		middleware.CORS,
-		middleware.BearerAuth(cfg.Token),
+		middleware.BearerAuthFunc(func() string { return *tokenHolder.Load() }),
 		middleware.Logging,
 	)
 
@@ -156,9 +175,20 @@ func main() {
 		http.NotFound(w, r)
 	})
 
+	// Outermost handler: CORS for all requests, plus optional per-IP rate limiting.
+	var rootHandler http.Handler = mux
+	if cfg.RateLimitPerSec > 0 {
+		rate := float64(cfg.RateLimitPerSec)
+		// Allow a short burst of 2x the sustained rate to absorb screen-load spikes.
+		limiter := middleware.NewRateLimiter(rate, rate*2)
+		limiter.StartCleanup(5*time.Minute, 10*time.Minute)
+		rootHandler = limiter.Middleware(rootHandler)
+		slog.Info("rate limiting enabled", "req_per_sec", cfg.RateLimitPerSec)
+	}
+
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
-		Handler:      middleware.CORS(mux),
+		Handler:      middleware.CORS(rootHandler),
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  120 * time.Second,
@@ -168,27 +198,49 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
+	// Graceful config reload on SIGHUP: re-read the token and log level from the
+	// config file/env and hot-apply them without restarting the listener.
+	hup := make(chan os.Signal, 1)
+	signal.Notify(hup, syscall.SIGHUP)
+	go func() {
+		for range hup {
+			rc := loadReloadableConfig(configFilePath)
+			setupLogger(rc.LogLevel)
+			tokenChanged := false
+			if rc.Token != "" && rc.Token != *tokenHolder.Load() {
+				tokenHolder.Store(&rc.Token)
+				tokenChanged = true
+			}
+			slog.Info("config reloaded via SIGHUP",
+				"log_level", rc.LogLevel,
+				"token_changed", tokenChanged,
+			)
+		}
+	}()
+
 	go func() {
 		var err error
 		if cfg.TLSCert != "" && cfg.TLSKey != "" {
-			log.Printf("TLS enabled (cert=%s)", cfg.TLSCert)
+			slog.Info("TLS enabled", "cert", cfg.TLSCert)
 			err = srv.ListenAndServeTLS(cfg.TLSCert, cfg.TLSKey)
 		} else {
 			err = srv.ListenAndServe()
 		}
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
-	log.Printf("Agent listening on :%s", cfg.Port)
+	slog.Info("agent listening", "addr", ":"+cfg.Port)
 	<-quit
-	log.Println("Shutting down...")
+	slog.Info("shutting down")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Forced shutdown: %v", err)
+		slog.Error("forced shutdown", "error", err)
+		os.Exit(1)
 	}
-	log.Println("Agent stopped")
+	slog.Info("agent stopped")
 }

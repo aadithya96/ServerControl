@@ -4,24 +4,31 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 )
 
 type Config struct {
-	Port     string
-	Token    string
-	TLSCert  string
-	TLSKey   string
-	LogLevel string
+	Port              string
+	Token             string
+	TLSCert           string
+	TLSKey            string
+	LogLevel          string
+	MetricsEnabled    bool
+	RateLimitPerSec   int
+	SelfUpdateEnabled bool
+	SelfUpdateURL     string
 }
+
+const configFilePath = "/etc/servercontrol/agent.conf"
 
 func loadConfig() *Config {
 	cfg := &Config{}
 
 	// Load from config file first
-	fileConfig := loadConfigFile("/etc/servercontrol/agent.conf")
+	fileConfig := loadConfigFile(configFilePath)
 
 	// CLI flags (highest priority)
 	flag.StringVar(&cfg.Port, "port", "", "Port to listen on")
@@ -29,6 +36,13 @@ func loadConfig() *Config {
 	flag.StringVar(&cfg.TLSCert, "tls-cert", "", "Path to TLS certificate")
 	flag.StringVar(&cfg.TLSKey, "tls-key", "", "Path to TLS key")
 	flag.StringVar(&cfg.LogLevel, "log-level", "", "Log level (debug, info, warn, error)")
+	var metricsFlag string
+	flag.StringVar(&metricsFlag, "metrics", "", "Enable Prometheus /metrics endpoint (true/false)")
+	var rateLimitFlag string
+	flag.StringVar(&rateLimitFlag, "rate-limit", "", "Max requests/sec per client IP (0 disables)")
+	var selfUpdateFlag string
+	flag.StringVar(&selfUpdateFlag, "self-update", "", "Enable POST /api/v1/agent/update self-update endpoint (true/false)")
+	flag.StringVar(&cfg.SelfUpdateURL, "update-url", "", "Base URL to download release binaries + SHA256SUMS.txt from")
 	flag.Parse()
 
 	// Apply defaults from file, then env, then CLI
@@ -47,9 +61,26 @@ func loadConfig() *Config {
 	if cfg.LogLevel == "" {
 		cfg.LogLevel = getEnvOrFileOrDefault("SC_LOG_LEVEL", fileConfig["LOG_LEVEL"], "info")
 	}
+	if metricsFlag == "" {
+		metricsFlag = getEnvOrFileOrDefault("SC_METRICS", fileConfig["METRICS"], "false")
+	}
+	cfg.MetricsEnabled = parseBool(metricsFlag)
+	if rateLimitFlag == "" {
+		rateLimitFlag = getEnvOrFileOrDefault("SC_RATE_LIMIT", fileConfig["RATE_LIMIT"], "30")
+	}
+	cfg.RateLimitPerSec = parseIntOrDefault(rateLimitFlag, 30)
+	if selfUpdateFlag == "" {
+		selfUpdateFlag = getEnvOrFileOrDefault("SC_SELF_UPDATE", fileConfig["SELF_UPDATE"], "false")
+	}
+	cfg.SelfUpdateEnabled = parseBool(selfUpdateFlag)
+	if cfg.SelfUpdateURL == "" {
+		cfg.SelfUpdateURL = getEnvOrFileOrDefault("SC_UPDATE_URL", fileConfig["UPDATE_URL"],
+			"https://github.com/aadithya96/ServerControl/releases/latest/download")
+	}
 
 	if cfg.Token == "" {
-		log.Fatal("ERROR: No auth token configured. Set --token, SC_TOKEN env var, or TOKEN= in /etc/servercontrol/agent.conf")
+		slog.Error("no auth token configured; set --token, SC_TOKEN env var, or TOKEN= in /etc/servercontrol/agent.conf")
+		os.Exit(1)
 	}
 
 	return cfg
@@ -84,6 +115,43 @@ func loadConfigFile(path string) map[string]string {
 	return result
 }
 
+// ReloadableConfig holds the subset of configuration that can be hot-applied on
+// SIGHUP without restarting the HTTP listener.
+type ReloadableConfig struct {
+	Token    string
+	LogLevel string
+}
+
+// loadReloadableConfig re-reads the hot-reloadable fields from the given config
+// file path and environment. CLI flags are process-lifetime and intentionally
+// not re-evaluated here. An empty Token means "no token found in file/env" and
+// callers should preserve the existing one rather than clearing it.
+func loadReloadableConfig(path string) ReloadableConfig {
+	fileConfig := loadConfigFile(path)
+	return ReloadableConfig{
+		Token:    getEnvOrFileOrDefault("SC_TOKEN", fileConfig["TOKEN"], ""),
+		LogLevel: getEnvOrFileOrDefault("SC_LOG_LEVEL", fileConfig["LOG_LEVEL"], "info"),
+	}
+}
+
+// parseIntOrDefault parses v as an int, returning def if it is empty or invalid.
+func parseIntOrDefault(v string, def int) int {
+	if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
+		return n
+	}
+	return def
+}
+
+// parseBool interprets common truthy strings ("true", "1", "yes", "on") case-insensitively.
+func parseBool(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "true", "1", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
+
 func getEnvOrFileOrDefault(envKey, fileVal, defaultVal string) string {
 	if v := os.Getenv(envKey); v != "" {
 		return v
@@ -95,5 +163,5 @@ func getEnvOrFileOrDefault(envKey, fileVal, defaultVal string) string {
 }
 
 func (c *Config) String() string {
-	return fmt.Sprintf("port=%s logLevel=%s tlsCert=%s", c.Port, c.LogLevel, c.TLSCert)
+	return fmt.Sprintf("port=%s logLevel=%s tlsCert=%s metrics=%t rateLimit=%d selfUpdate=%t", c.Port, c.LogLevel, c.TLSCert, c.MetricsEnabled, c.RateLimitPerSec, c.SelfUpdateEnabled)
 }

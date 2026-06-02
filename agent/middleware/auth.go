@@ -1,14 +1,21 @@
 package middleware
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 )
 
-// BearerAuth returns a middleware that requires a valid Bearer token.
+// BearerAuth returns a middleware that requires a fixed valid Bearer token.
 func BearerAuth(token string) func(http.Handler) http.Handler {
+	return BearerAuthFunc(func() string { return token })
+}
+
+// BearerAuthFunc is like BearerAuth but resolves the expected token on every
+// request via tokenFn. This allows the token to be hot-reloaded (e.g. on SIGHUP)
+// without restarting the server.
+func BearerAuthFunc(tokenFn func() string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -17,7 +24,7 @@ func BearerAuth(token string) func(http.Handler) http.Handler {
 				return
 			}
 			parts := strings.SplitN(authHeader, " ", 2)
-			if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || parts[1] != token {
+			if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || parts[1] != tokenFn() {
 				http.Error(w, `{"error":"invalid token"}`, http.StatusUnauthorized)
 				return
 			}
@@ -32,7 +39,12 @@ func Logging(next http.Handler) http.Handler {
 		start := time.Now()
 		lw := &loggingResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(lw, r)
-		log.Printf("%s %s %d %s", r.Method, r.URL.Path, lw.statusCode, time.Since(start))
+		slog.Info("request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", lw.statusCode,
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
 	})
 }
 
